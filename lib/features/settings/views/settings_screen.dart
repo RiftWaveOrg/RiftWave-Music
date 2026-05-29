@@ -3,6 +3,10 @@ import 'package:get/get.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:riftwave_music/features/settings/controllers/settings_controller.dart';
+import 'package:riftwave_music/features/settings/views/about_screen.dart';
+import 'package:riftwave_music/features/settings/views/privacy_screen.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:riftwave_music/shared/controllers/update_controller.dart';
 import 'package:riftwave_music/core/models/region.dart';
 
 class SettingsScreen extends GetView<SettingsController> {
@@ -140,28 +144,80 @@ class SettingsScreen extends GetView<SettingsController> {
 
             _buildSectionTitle(theme, 'About'),
             const SizedBox(height: 12),
-            _buildSettingsTile(
+            Obx(() => _buildSettingsTile(
               colorScheme: colorScheme,
               icon: Icons.info_outline_rounded,
               title: 'Version',
-              subtitle: '1.0.0',
-              onTap: () {},
-            ).animate().fadeIn(duration: 400.ms, delay: 300.ms),
+              subtitle: controller.appVersion.value,
+              onTap: () => Get.to(() => const AboutScreen()),
+            )).animate().fadeIn(duration: 400.ms, delay: 300.ms),
+            const SizedBox(height: 8),
+            _buildSettingsTile(
+              colorScheme: colorScheme,
+              icon: Icons.system_update_rounded,
+              title: 'Check for Updates',
+              subtitle: 'Tap to check for the latest version',
+              onTap: () async {
+                if (Get.isRegistered<UpdateController>()) {
+                  final updateCtrl = Get.find<UpdateController>();
+                  
+                  Get.dialog(
+                    Center(child: CircularProgressIndicator(color: colorScheme.primary)),
+                    barrierDismissible: false,
+                  );
+                  
+                  final hasUpdate = await updateCtrl.checkForUpdatesManual();
+                  
+                  if (Get.isDialogOpen ?? false) {
+                    Get.back(); // close loader
+                  }
+                  
+                  if (!hasUpdate) {
+                    Get.snackbar(
+                      'Up to Date', 
+                      'You are already on the latest version.', 
+                      snackPosition: SnackPosition.BOTTOM, 
+                      margin: const EdgeInsets.all(16), 
+                      backgroundColor: const Color(0xFF000000), 
+                      colorText: const Color(0xFFFFFFFF)
+                    );
+                  }
+                }
+              },
+            ).animate().fadeIn(duration: 400.ms, delay: 320.ms),
             const SizedBox(height: 8),
             _buildSettingsTile(
               colorScheme: colorScheme,
               icon: Icons.code_rounded,
               title: 'Source Code',
               subtitle: 'GitHub — Open Source (GPL v3)',
-              onTap: () {},
+              onTap: () async {
+                final url = Uri.parse('https://github.com/Pratyush0803/RiftWave-Music');
+                if (await canLaunchUrl(url)) {
+                  await launchUrl(url, mode: LaunchMode.externalApplication);
+                }
+              },
             ).animate().fadeIn(duration: 400.ms, delay: 350.ms),
             const SizedBox(height: 8),
             _buildSettingsTile(
               colorScheme: colorScheme,
+              icon: Icons.developer_mode_rounded,
+              title: 'Developer',
+              subtitle: 'Made with ❤️ by Pratyush0803',
+              onTap: () async {
+                final url = Uri.parse('https://github.com/Pratyush0803');
+                if (await canLaunchUrl(url)) {
+                  await launchUrl(url, mode: LaunchMode.externalApplication);
+                }
+              },
+            ).animate().fadeIn(duration: 400.ms, delay: 380.ms),
+            const SizedBox(height: 8),
+            _buildSettingsTile(
+              colorScheme: colorScheme,
               icon: Icons.privacy_tip_outlined,
-              title: 'Privacy',
-              subtitle: 'No tracking, no ads, no account',
-              onTap: () {},
+              title: 'Privacy Policy',
+              subtitle: 'No tracking, no ads, no accounts',
+              onTap: () => Get.to(() => const PrivacyScreen()),
             ).animate().fadeIn(duration: 400.ms, delay: 400.ms),
 
             const SizedBox(height: 48),

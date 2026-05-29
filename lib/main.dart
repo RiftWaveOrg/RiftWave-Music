@@ -49,7 +49,7 @@ void main() async {
       androidNotificationChannelName: 'RiftWave Music',
       androidNotificationOngoing: true,
       androidStopForegroundOnPause: true,
-      androidNotificationIcon: 'drawable/ic_notification',
+      androidNotificationIcon: 'mipmap/ic_launcher',
       androidNotificationClickStartsActivity: true,
       fastForwardInterval: Duration(seconds: 10),
       rewindInterval: Duration(seconds: 10),
