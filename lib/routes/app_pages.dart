@@ -11,6 +11,7 @@ import 'package:riftwave_music/features/player/views/player_screen.dart';
 import 'package:riftwave_music/features/library/views/library_screen.dart';
 import 'package:riftwave_music/features/settings/views/settings_screen.dart';
 import 'package:riftwave_music/shared/views/main_navigation.dart';
+import 'package:riftwave_music/features/library/views/playlist_view_screen.dart';
 
 class AppPages {
   AppPages._();
@@ -52,6 +53,18 @@ class AppPages {
       name: AppRoutes.settings,
       page: () => const SettingsScreen(),
       binding: SettingsBinding(),
+    ),
+    GetPage(
+      name: AppRoutes.likedSongs,
+      page: () => const PlaylistViewScreen(isLikedSongs: true),
+    ),
+    GetPage(
+      name: AppRoutes.downloadedSongs,
+      page: () => const PlaylistViewScreen(isDownloadedSongs: true),
+    ),
+    GetPage(
+      name: AppRoutes.playlistDetail,
+      page: () => PlaylistViewScreen(playlist: Get.arguments),
     ),
   ];
 }

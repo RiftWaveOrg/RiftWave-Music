@@ -5,8 +5,8 @@ import 'package:riftwave_music/core/database/models/song_model.dart';
 import 'package:riftwave_music/core/api/saavn_api.dart';
 import 'package:riftwave_music/core/api/youtube_api.dart';
 import 'package:riftwave_music/core/services/recommendation_engine.dart';
+import 'package:riftwave_music/features/library/controllers/library_controller.dart';
 import 'package:riftwave_music/features/settings/controllers/settings_controller.dart';
-import 'package:riftwave_music/shared/controllers/history_controller.dart';
 
 class HomeController extends GetxController {
   final RxList<SongModel> trendingSongs = <SongModel>[].obs;
@@ -100,8 +100,10 @@ class HomeController extends GetxController {
 
   void _loadLocalHistory() {
     try {
-      final history = Get.find<HistoryController>();
-      recentlyPlayed.assignAll(history.recentlyPlayed);
+      final library = Get.find<LibraryController>();
+      if (library.history.isNotEmpty) {
+        recentlyPlayed.assignAll(library.history);
+      }
     } catch (e) {
       debugPrint('HomeController: Failed to load local history: $e');
     }

@@ -6,6 +6,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:riftwave_music/features/home/controllers/home_controller.dart';
 import 'package:riftwave_music/shared/controllers/audio_player_controller.dart';
 import 'package:riftwave_music/features/home/views/content_detail_screen.dart';
+import 'package:riftwave_music/features/library/controllers/library_controller.dart';
+import 'package:riftwave_music/core/database/models/song_model.dart';
 
 class HomeScreen extends GetView<HomeController> {
   const HomeScreen({super.key});
@@ -62,7 +64,11 @@ class HomeScreen extends GetView<HomeController> {
                 ),
               ),
               Obx(() {
-                if (controller.recentlyPlayed.isEmpty) {
+                final library = Get.find<LibraryController>();
+                // Force Obx registration
+                library.history.length;
+                
+                if (library.history.isEmpty) {
                   return const SliverToBoxAdapter(child: SizedBox.shrink());
                 }
                 return SliverToBoxAdapter(
@@ -73,7 +79,7 @@ class HomeScreen extends GetView<HomeController> {
                       children: [
                         _buildSectionHeader(theme, 'Recently Played'),
                         const SizedBox(height: 12),
-                        _buildRecentlyPlayedGrid(context, colorScheme, theme),
+                        _buildRecentlyPlayedGrid(context, colorScheme, theme, library.history),
                       ],
                     ),
                   ),
@@ -440,8 +446,8 @@ class HomeScreen extends GetView<HomeController> {
     ).animate().fadeIn(duration: 500.ms, delay: 400.ms);
   }
 
-  Widget _buildRecentlyPlayedGrid(BuildContext context, ColorScheme colorScheme, ThemeData theme) {
-    final songs = controller.recentlyPlayed.take(6).toList();
+  Widget _buildRecentlyPlayedGrid(BuildContext context, ColorScheme colorScheme, ThemeData theme, List<SongModel> historyList) {
+    final songs = historyList.take(6).toList();
     final playerController = Get.find<AudioPlayerController>();
 
     return GridView.builder(
