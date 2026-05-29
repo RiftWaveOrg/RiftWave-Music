@@ -1,0 +1,100 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*' # Trigger the workflow when you push a tag like v1.0.0
+  workflow_dispatch: # Allows manual triggering from the Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: apk
+            name: Android
+          - os: windows-latest
+            target: windows
+            name: Windows
+          - os: ubuntu-latest
+            target: linux
+            name: Linux
+          - os: macos-latest
+            target: macos
+            name: macOS
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Linux Build Dependencies
+        if: matrix.target == 'linux'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y ninja-build libgtk-3-dev pkg-config clang cmake
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install Project Dependencies
+        run: flutter pub get
+
+      - name: Build Android APK
+        if: matrix.target == 'apk'
+        run: flutter build apk --release
+
+      - name: Build Windows
+        if: matrix.target == 'windows'
+        run: flutter build windows --release
+
+      - name: Build Linux
+        if: matrix.target == 'linux'
+        run: flutter build linux --release
+
+      - name: Build macOS
+        if: matrix.target == 'macos'
+        run: flutter build macos --release
+
+      # Packaging Artifacts for Release
+      - name: Rename Android APK
+        if: matrix.target == 'apk'
+        run: mv build/app/outputs/flutter-apk/app-release.apk RiftWave-Android.apk
+        shell: bash
+
+      - name: Archive Windows Release
+        if: matrix.target == 'windows'
+        run: Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath RiftWave-Windows.zip
+
+      - name: Archive Linux Release
+        if: matrix.target == 'linux'
+        run: tar -czvf RiftWave-Linux.tar.gz -C build/linux/x64/release/bundle .
+        shell: bash
+
+      - name: Archive macOS Release
+        if: matrix.target == 'macos'
+        run: |
+          cd build/macos/Build/Products/Release
+          zip -r ../../../../../RiftWave-macOS.zip *.app
+        shell: bash
+
+      # Uploading Release Files
+      - name: Publish to GitHub Releases
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            RiftWave-Android.apk
+            RiftWave-Windows.zip
+            RiftWave-Linux.tar.gz
+            RiftWave-macOS.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
