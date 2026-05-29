@@ -2,9 +2,6 @@
   <img src="assets/images/RiftWave_Card.png" width="100%" alt="RiftWave Music Banner">
 </p>
 
-<h1 align="center">
-  <img src="assets/images/RiftWave_logo.png" width="35" align="center" alt="Logo"> RiftWave Music
-</h1>
 
 <p align="center">
   <strong>An open-source, beautifully designed, and highly optimized music streaming app.</strong><br>
