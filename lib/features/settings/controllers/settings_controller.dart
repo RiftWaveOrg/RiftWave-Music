@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:riftwave_music/core/models/region.dart';
@@ -16,6 +17,7 @@ class SettingsController extends GetxController {
   static const String _dataWarningKey = 'has_seen_data_warning';
 
   final Rx<ThemeVariant> themeVariant = ThemeVariant.dark.obs;
+  final RxString appVersion = '1.0.0'.obs;
   final RxString audioQuality = '320kbps'.obs;
   final RxString regionCode = 'IN'.obs;
   final RxBool videoModeEnabled = false.obs;
@@ -26,6 +28,16 @@ class SettingsController extends GetxController {
   void onInit() {
     super.onInit();
     _loadSettings();
+    _loadAppVersion();
+  }
+
+  Future<void> _loadAppVersion() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      appVersion.value = info.version;
+    } catch (e) {
+      appVersion.value = 'Unknown';
+    }
   }
 
   MusicRegion get currentRegion => MusicRegion.fromCode(regionCode.value);
@@ -115,7 +127,7 @@ class SettingsController extends GetxController {
           'Background Activity',
           'RiftWave is already allowed to run in the background without restrictions!',
           snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: const Color(0xFF1A1A2E),
+          backgroundColor: const Color(0xFF000000),
           colorText: const Color(0xFFFFFFFF),
           margin: const EdgeInsets.all(16),
           borderRadius: 12,
@@ -126,8 +138,9 @@ class SettingsController extends GetxController {
         'Error',
         'Could not open battery settings.',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: const Color(0xFF1A1A2E),
+        backgroundColor: const Color(0xFF000000),
         colorText: const Color(0xFFFFFFFF),
+        margin: const EdgeInsets.all(16),
       );
     }
   }

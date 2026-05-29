@@ -181,6 +181,9 @@ class VideoPlayerController extends GetxController with WidgetsBindingObserver {
         'Music Video Unavailable',
         'Playing audio only.',
         snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFF000000),
+        colorText: const Color(0xFFFFFFFF),
+        margin: const EdgeInsets.all(16),
       );
     }
     

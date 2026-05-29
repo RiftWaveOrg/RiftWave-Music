@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:open_file/open_file.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -68,6 +69,43 @@ class UpdateController extends GetxController {
     }
   }
 
+  Future<bool> checkForUpdatesManual() async {
+    try {
+      final dio = Dio();
+      final response = await dio.get('https://api.github.com/repos/Pratyush0803/RiftWave-Music/releases/latest');
+      
+      if (response.statusCode == 200) {
+        final data = response.data;
+        final latestTag = data['tag_name'] as String;
+        final releaseBody = data['body'] as String;
+        
+        final String githubVersion = latestTag.startsWith('v') ? latestTag.substring(1) : latestTag;
+        final packageInfo = await PackageInfo.fromPlatform();
+        final currentVersion = packageInfo.version;
+
+        if (_isNewerVersion(currentVersion, githubVersion)) {
+          latestVersion.value = latestTag;
+          changelog.value = releaseBody;
+          
+          final assets = data['assets'] as List<dynamic>;
+          for (var asset in assets) {
+            final name = asset['name'] as String;
+            if (name.endsWith('.apk')) {
+              apkDownloadUrl.value = asset['browser_download_url'] as String;
+              break;
+            }
+          }
+          
+          updateAvailable.value = true;
+          return true;
+        }
+      }
+    } catch (e) {
+      debugPrint('Manual update check failed: $e');
+    }
+    return false;
+  }
+
   bool _isNewerVersion(String current, String latest) {
     List<int> currParts = current.split('.').map((s) => int.tryParse(s) ?? 0).toList();
     List<int> latestParts = latest.split('.').map((s) => int.tryParse(s) ?? 0).toList();
@@ -113,7 +151,7 @@ class UpdateController extends GetxController {
         if (!status.isGranted) {
           final req = await Permission.requestInstallPackages.request();
           if (req.isDenied) {
-            Get.snackbar('Permission Required', 'Cannot install update without permission.');
+            Get.snackbar('Permission Required', 'Cannot install update without permission.', backgroundColor: const Color(0xFF000000), colorText: const Color(0xFFFFFFFF), snackPosition: SnackPosition.BOTTOM, margin: const EdgeInsets.all(16));
             return;
           }
         }
@@ -139,11 +177,11 @@ class UpdateController extends GetxController {
         
         final result = await OpenFile.open(savePath);
         if (result.type != ResultType.done) {
-          Get.snackbar('Update Failed', result.message);
+          Get.snackbar('Update Failed', result.message ?? 'Unknown error', backgroundColor: const Color(0xFF000000), colorText: const Color(0xFFFFFFFF), snackPosition: SnackPosition.BOTTOM, margin: const EdgeInsets.all(16));
         }
       } catch (e) {
         isDownloading.value = false;
-        Get.snackbar('Update Failed', 'An error occurred during download.');
+        Get.snackbar('Update Failed', 'An error occurred during download.', backgroundColor: const Color(0xFF000000), colorText: const Color(0xFFFFFFFF), snackPosition: SnackPosition.BOTTOM, margin: const EdgeInsets.all(16));
         debugPrint(e.toString());
       }
     }

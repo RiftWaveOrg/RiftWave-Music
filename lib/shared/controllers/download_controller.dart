@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
 import 'package:path_provider/path_provider.dart';
@@ -41,12 +42,13 @@ class DownloadController extends GetxController {
 
       
       String audioUrl = '';
+      final targetId = song.sourceId.isNotEmpty ? song.sourceId : song.id;
       if (song.source == MusicSource.youtube) {
         final yt = Get.find<YouTubeApi>();
-        audioUrl = await yt.getStreamUrl(song.id);
+        audioUrl = await yt.getStreamUrl(targetId);
       } else {
         final saavn = Get.find<SaavnApi>();
-        audioUrl = await saavn.getStreamUrl(song.id);
+        audioUrl = await saavn.getStreamUrl(targetId);
       }
 
       if (audioUrl.isEmpty) throw Exception('No audio URL available for download');
@@ -83,6 +85,9 @@ class DownloadController extends GetxController {
         'Download Complete', 
         '${song.title} has been downloaded.',
         snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFF000000),
+        colorText: const Color(0xFFFFFFFF),
+        margin: const EdgeInsets.all(16),
       );
     } catch (e) {
       debugPrint('DownloadController: Failed to download song: $e');
@@ -91,6 +96,9 @@ class DownloadController extends GetxController {
         'Download Failed', 
         'Failed to download ${song.title}',
         snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFF000000),
+        colorText: const Color(0xFFFFFFFF),
+        margin: const EdgeInsets.all(16),
       );
     }
   }
