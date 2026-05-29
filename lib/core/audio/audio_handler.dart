@@ -40,11 +40,15 @@ class RiftWaveAudioHandler extends BaseAudioHandler with SeekHandler {
     });
   }
 
-  Future<void> setMediaItemAndPlay(MediaItem item, String audioUrl) async {
+  Future<void> setMediaItemOnly(MediaItem item, String audioUrl) async {
     mediaItem.add(item);
-    debugPrint('RiftWaveAudioHandler: Loading audio URL: $audioUrl');
+    debugPrint('RiftWaveAudioHandler: Loading audio URL only: $audioUrl');
     final uri = Uri.parse(audioUrl);
     await _player.setAudioSource(AudioSource.uri(uri));
+  }
+
+  Future<void> setMediaItemAndPlay(MediaItem item, String audioUrl) async {
+    await setMediaItemOnly(item, audioUrl);
     await _player.play();
   }
 

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -19,6 +20,9 @@ import 'package:riftwave_music/shared/widgets/playlist_selector_sheet.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:riftwave_music/features/player/widgets/wavy_seekbar.dart';
 import 'package:riftwave_music/shared/widgets/download_progress_indicator.dart';
+import 'package:riftwave_music/shared/widgets/marquee_text.dart';
+import 'package:media_kit_video/media_kit_video.dart';
+import 'package:riftwave_music/shared/controllers/video_player_controller.dart';
 
 class PlayerScreen extends StatefulWidget {
   const PlayerScreen({super.key});
@@ -587,31 +591,85 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
           borderRadius: BorderRadius.circular(20),
           child: Hero(
             tag: 'album_art_${song?.id ?? 'none'}',
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 500),
-              switchInCurve: Curves.easeIn,
-              switchOutCurve: Curves.easeOut,
-              transitionBuilder: (child, animation) {
-                return FadeTransition(
-                  opacity: animation,
-                  child: ScaleTransition(
-                    scale: Tween<double>(begin: 0.9, end: 1.0).animate(animation),
-                    child: child,
+            child: Obx(() {
+              final videoController = Get.find<VideoPlayerController>();
+              final isVideo = videoController.isVideoAvailable.value;
+              final isHandling = videoController.isHandlingPlayback;
+
+              if (isHandling) {
+                return GestureDetector(
+                  onTap: () {
+                    
+                    Get.toNamed('/fullscreen_video');
+                  },
+                  child: AspectRatio(
+                    aspectRatio: videoController.videoAspectRatio.value,
+                    child: Stack(
+                      fit: StackFit.expand,
+                        children: [
+                        
+                        if (song != null && song.thumbnailUrl.isNotEmpty)
+                          CachedNetworkImage(
+                            imageUrl: song.thumbnailUrl,
+                            fit: BoxFit.cover,
+                          ),
+                        BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 40.0, sigmaY: 40.0),
+                          child: Container(
+                            color: Colors.black.withAlpha(120),
+                          ),
+                        ),
+                        
+                        Video(
+                          controller: videoController.videoController,
+                          controls: NoVideoControls,
+                          fit: BoxFit.contain,
+                        ),
+                        
+                        Positioned(
+                          right: 8,
+                          bottom: 8,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withAlpha(128),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.fullscreen_rounded, color: Colors.white, size: 20),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 );
-              },
-              child: song != null && song.thumbnailUrl.isNotEmpty
-                  ? CachedNetworkImage(
-                      key: ValueKey(song.thumbnailUrl),
-                      imageUrl: song.thumbnailUrl,
-                      fit: BoxFit.cover,
-                      width: artSize,
-                      height: artSize,
-                      placeholder: (_, __) => _artPlaceholder(colors, artSize),
-                      errorWidget: (_, __, ___) => _artPlaceholder(colors, artSize),
-                    )
-                  : _artPlaceholder(colors, artSize),
-            ),
+              }
+
+              return AnimatedSwitcher(
+                duration: const Duration(milliseconds: 500),
+                switchInCurve: Curves.easeIn,
+                switchOutCurve: Curves.easeOut,
+                transitionBuilder: (child, animation) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: ScaleTransition(
+                      scale: Tween<double>(begin: 0.9, end: 1.0).animate(animation),
+                      child: child,
+                    ),
+                  );
+                },
+                child: song != null && song.thumbnailUrl.isNotEmpty
+                    ? CachedNetworkImage(
+                        key: ValueKey(song.thumbnailUrl),
+                        imageUrl: song.thumbnailUrl,
+                        fit: BoxFit.cover,
+                        width: artSize,
+                        height: artSize,
+                        placeholder: (_, __) => _artPlaceholder(colors, artSize),
+                        errorWidget: (_, __, ___) => _artPlaceholder(colors, artSize),
+                      )
+                    : _artPlaceholder(colors, artSize),
+              );
+            }),
           ),
         ),
       ),
@@ -695,7 +753,7 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
               }),
               Obx(() {
                 final libraryController = Get.find<LibraryController>();
-                libraryController.likedSongs.length; // Force Obx registration
+                libraryController.likedSongs.length; 
                 final liked = libraryController.isLiked(song.id);
                 return GestureDetector(
                   onTap: () {
@@ -854,7 +912,12 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
           ),
           onPressed: _audioController.skipToPrevious,
         ),
-        Obx(() => GestureDetector(
+        Obx(() {
+          final bool isLoading = _audioController.isBuffering.value ||
+              (Get.isRegistered<VideoPlayerController>() && Get.find<VideoPlayerController>().isVideoLoading.value);
+          final bool isPlaying = _audioController.isPlaying.value;
+
+          return GestureDetector(
               onTap: _audioController.togglePlayPause,
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
@@ -874,18 +937,29 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
                 child: Center(
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 200),
-                    child: Icon(
-                      _audioController.isPlaying.value
-                          ? Icons.pause_rounded
-                          : Icons.play_arrow_rounded,
-                      key: ValueKey(_audioController.isPlaying.value),
-                      color: _contrastTextFor(colors.accent),
-                      size: 30,
-                    ),
+                    child: isLoading
+                        ? SizedBox(
+                            key: const ValueKey('loading'),
+                            width: 28,
+                            height: 28,
+                            child: CircularProgressIndicator(
+                              color: _contrastTextFor(colors.accent),
+                              strokeWidth: 3.5,
+                            ),
+                          )
+                        : Icon(
+                            isPlaying
+                                ? Icons.pause_rounded
+                                : Icons.play_arrow_rounded,
+                            key: ValueKey('icon_$isPlaying'),
+                            color: _contrastTextFor(colors.accent),
+                            size: 32,
+                          ),
                   ),
                 ),
               ),
-            )),
+            );
+        }),
         IconButton(
           icon: Icon(
             Icons.skip_next_rounded,

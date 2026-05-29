@@ -12,6 +12,7 @@ import 'package:riftwave_music/features/library/views/library_screen.dart';
 import 'package:riftwave_music/features/settings/views/settings_screen.dart';
 import 'package:riftwave_music/shared/views/main_navigation.dart';
 import 'package:riftwave_music/features/library/views/playlist_view_screen.dart';
+import 'package:riftwave_music/features/player/views/fullscreen_video_screen.dart';
 
 class AppPages {
   AppPages._();
@@ -65,6 +66,10 @@ class AppPages {
     GetPage(
       name: AppRoutes.playlistDetail,
       page: () => PlaylistViewScreen(playlist: Get.arguments),
+    ),
+    GetPage(
+      name: AppRoutes.fullscreenVideo,
+      page: () => const FullscreenVideoScreen(),
     ),
   ];
 }

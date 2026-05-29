@@ -11,4 +11,5 @@ abstract class AppRoutes {
   static const String downloadedSongs = '/downloaded-songs';
   static const String playlistDetail = '/playlist-detail';
   static const String main = '/main';
+  static const String fullscreenVideo = '/fullscreen_video';
 }

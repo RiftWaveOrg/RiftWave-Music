@@ -120,7 +120,7 @@ class SongTile extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Obx(() {
-          // Accessing the RxList length forces Obx tracking
+          
           library.likedSongs.length;
           final isLiked = library.isLiked(song!.id);
           return IconButton(
@@ -166,7 +166,7 @@ class SongTile extends StatelessWidget {
               child: Row(
                 children: [
                   Obx(() {
-                    // Force GetX registration
+                    
                     downloader.downloadProgress.length;
                     library.downloadedSongs.length;
                     

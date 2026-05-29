@@ -60,9 +60,9 @@ class PlaylistViewScreen extends StatelessWidget {
         } else if (isDownloadedSongs) {
           songs = library.downloadedSongs.toList();
         } else if (playlist != null) {
-          library.playlists.length; // Force Obx registration to track playlist updates
+          library.playlists.length; 
           
-          // We need to fetch the updated playlist instance if available
+          
           final updatedPlaylist = library.playlists.firstWhereOrNull((p) => p.id == playlist!.id) ?? playlist!;
           songs = library.getSongsForPlaylist(updatedPlaylist);
         }
