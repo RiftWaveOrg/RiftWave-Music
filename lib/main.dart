@@ -23,6 +23,7 @@ import 'package:riftwave_music/shared/controllers/download_controller.dart';
 import 'package:riftwave_music/shared/controllers/update_controller.dart';
 
 import 'package:media_kit/media_kit.dart';
+import 'package:riftwave_music/shared/controllers/video_player_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -69,6 +70,7 @@ void main() async {
   
   Get.put(DownloadController(), permanent: true);
   Get.put(UpdateController(), permanent: true);
+  Get.put(VideoPlayerController(), permanent: true);
   Get.lazyPut(() => LibraryController(), fenix: true);
 
   runApp(const RiftWaveApp());
