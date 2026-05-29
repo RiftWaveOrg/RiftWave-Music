@@ -55,7 +55,7 @@ jobs:
 
       - name: Build Android APK
         if: matrix.target == 'apk'
-        run: flutter build apk --release
+        run: flutter build apk --release --split-per-abi
 
       - name: Build Windows
         if: matrix.target == 'windows'
@@ -70,9 +70,12 @@ jobs:
         run: flutter build macos --release
 
       # Packaging Artifacts for Release
-      - name: Rename Android APK
+      - name: Rename Android APKs
         if: matrix.target == 'apk'
-        run: mv build/app/outputs/flutter-apk/app-release.apk RiftWave-Android.apk
+        run: |
+          mv build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk RiftWave-Android-arm32.apk
+          mv build/app/outputs/flutter-apk/app-arm64-v8a-release.apk RiftWave-Android-arm64.apk
+          mv build/app/outputs/flutter-apk/app-x86_64-release.apk RiftWave-Android-x86_64.apk
         shell: bash
 
       - name: Archive Windows Release
