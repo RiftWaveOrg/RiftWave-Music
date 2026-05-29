@@ -40,13 +40,22 @@ class SettingsScreen extends GetView<SettingsController> {
 
             _buildSectionTitle(theme, 'Playback'),
             const SizedBox(height: 12),
-            _buildSettingsTile(
-              colorScheme: colorScheme,
-              icon: Icons.high_quality_rounded,
-              title: 'Audio Quality',
-              subtitle: 'High (320kbps)',
-              onTap: () {},
-            ).animate().fadeIn(duration: 400.ms, delay: 200.ms),
+            Obx(() {
+              String subtitle = 'Ultra (320kbps)';
+              final q = controller.audioQuality.value;
+              if (q == '48kbps') subtitle = 'Data Saver (48kbps)';
+              if (q == '96kbps') subtitle = 'Standard (96kbps)';
+              if (q == '160kbps') subtitle = 'High (160kbps)';
+              if (q == '320kbps') subtitle = 'Ultra (320kbps)';
+
+              return _buildSettingsTile(
+                colorScheme: colorScheme,
+                icon: Icons.high_quality_rounded,
+                title: 'Audio Quality',
+                subtitle: subtitle,
+                onTap: () => _showAudioQualityDialog(context),
+              );
+            }).animate().fadeIn(duration: 400.ms, delay: 200.ms),
             const SizedBox(height: 8),
             _buildSettingsTile(
               colorScheme: colorScheme,
@@ -215,6 +224,134 @@ class SettingsScreen extends GetView<SettingsController> {
     required String title,
     required String subtitle,
     required ThemeVariant variant,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: selected
+          ? colorScheme.primary.withAlpha(25)
+          : colorScheme.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 22,
+                height: 22,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: selected
+                        ? colorScheme.primary
+                        : colorScheme.onSurface.withAlpha(80),
+                    width: 2,
+                  ),
+                  color: selected ? colorScheme.primary : Colors.transparent,
+                ),
+                child: selected
+                    ? const Icon(Icons.check, size: 14, color: Colors.white)
+                    : null,
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: colorScheme.onSurface,
+                        fontWeight: FontWeight.w500,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        color: colorScheme.onSurface.withAlpha(120),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showAudioQualityDialog(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: colorScheme.surface,
+        title: const Text('Choose Audio Quality'),
+        content: Obx(() => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildQualityOption(
+              colorScheme: colorScheme,
+              title: 'Data Saver',
+              subtitle: '48 kbps — Lowest data usage',
+              quality: '48kbps',
+              selected: controller.audioQuality.value == '48kbps',
+              onTap: () => controller.setAudioQuality('48kbps'),
+            ),
+            const SizedBox(height: 8),
+            _buildQualityOption(
+              colorScheme: colorScheme,
+              title: 'Standard',
+              subtitle: '96 kbps — Balanced quality/data',
+              quality: '96kbps',
+              selected: controller.audioQuality.value == '96kbps',
+              onTap: () => controller.setAudioQuality('96kbps'),
+            ),
+            const SizedBox(height: 8),
+            _buildQualityOption(
+              colorScheme: colorScheme,
+              title: 'High',
+              subtitle: '160 kbps — High fidelity sound',
+              quality: '160kbps',
+              selected: controller.audioQuality.value == '160kbps',
+              onTap: () => controller.setAudioQuality('160kbps'),
+            ),
+            const SizedBox(height: 8),
+            _buildQualityOption(
+              colorScheme: colorScheme,
+              title: 'Ultra',
+              subtitle: '320 kbps — Highest audio depth',
+              quality: '320kbps',
+              selected: controller.audioQuality.value == '320kbps',
+              onTap: () => controller.setAudioQuality('320kbps'),
+            ),
+          ],
+        )),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text(
+              'Done',
+              style: TextStyle(color: colorScheme.primary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQualityOption({
+    required ColorScheme colorScheme,
+    required String title,
+    required String subtitle,
+    required String quality,
     required bool selected,
     required VoidCallback onTap,
   }) {

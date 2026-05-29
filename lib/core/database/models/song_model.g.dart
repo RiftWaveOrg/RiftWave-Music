@@ -24,15 +24,17 @@ class SongModelAdapter extends TypeAdapter<SongModel> {
       thumbnailUrl: fields[4] as String,
       audioUrl: fields[5] as String,
       durationMs: fields[6] as int,
-      source: fields[7] as String,
+      source: fields[7] as MusicSource,
       sourceId: fields[8] as String,
+      isDownloaded: fields[9] as bool,
+      localPath: fields[10] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, SongModel obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(11)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -50,7 +52,11 @@ class SongModelAdapter extends TypeAdapter<SongModel> {
       ..writeByte(7)
       ..write(obj.source)
       ..writeByte(8)
-      ..write(obj.sourceId);
+      ..write(obj.sourceId)
+      ..writeByte(9)
+      ..write(obj.isDownloaded)
+      ..writeByte(10)
+      ..write(obj.localPath);
   }
 
   @override
@@ -60,6 +66,45 @@ class SongModelAdapter extends TypeAdapter<SongModel> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is SongModelAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class MusicSourceAdapter extends TypeAdapter<MusicSource> {
+  @override
+  final int typeId = 4;
+
+  @override
+  MusicSource read(BinaryReader reader) {
+    switch (reader.readByte()) {
+      case 0:
+        return MusicSource.youtube;
+      case 1:
+        return MusicSource.saavn;
+      default:
+        return MusicSource.youtube;
+    }
+  }
+
+  @override
+  void write(BinaryWriter writer, MusicSource obj) {
+    switch (obj) {
+      case MusicSource.youtube:
+        writer.writeByte(0);
+        break;
+      case MusicSource.saavn:
+        writer.writeByte(1);
+        break;
+    }
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is MusicSourceAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }

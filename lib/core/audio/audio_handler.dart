@@ -4,7 +4,10 @@ import 'package:flutter/foundation.dart';
 import 'package:just_audio/just_audio.dart';
 
 class RiftWaveAudioHandler extends BaseAudioHandler with SeekHandler {
-  final AudioPlayer _player = AudioPlayer();
+  final AudioPlayer _player = AudioPlayer(
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    useProxyForRequestHeaders: false,
+  );
 
   late final StreamSubscription<PlayerState> _playerStateSub;
   late final StreamSubscription<Duration?> _durationSub;
@@ -39,21 +42,28 @@ class RiftWaveAudioHandler extends BaseAudioHandler with SeekHandler {
   }
 
   Future<void> setMediaItemAndPlay(MediaItem item, String audioUrl) async {
-
     mediaItem.add(item);
+    debugPrint('RiftWaveAudioHandler: Loading audio URL: $audioUrl');
+    final uri = Uri.parse(audioUrl);
 
-    try {
-      await _player.setAudioSource(AudioSource.uri(Uri.parse(audioUrl)));
-      await _player.play();
-    } catch (e) {
-      debugPrint('RiftWaveAudioHandler: Failed to load audio — $e');
+    final headers = <String, String>{};
+    if (audioUrl.contains('youtube.com') || audioUrl.contains('googlevideo.com')) {
+      headers['Referer'] = 'https://www.youtube.com/';
     }
+
+    await _player.setAudioSource(AudioSource.uri(uri, headers: headers));
+    await _player.play();
   }
 
   @override
   Future<void> prepareFromUri(Uri uri, [Map<String, dynamic>? extras]) async {
     try {
-      await _player.setAudioSource(AudioSource.uri(uri));
+      final audioUrl = uri.toString();
+      final headers = <String, String>{};
+      if (audioUrl.contains('youtube.com') || audioUrl.contains('googlevideo.com')) {
+        headers['Referer'] = 'https://www.youtube.com/';
+      }
+      await _player.setAudioSource(AudioSource.uri(uri, headers: headers));
     } catch (e) {
       debugPrint('RiftWaveAudioHandler: Failed to prepare audio — $e');
     }

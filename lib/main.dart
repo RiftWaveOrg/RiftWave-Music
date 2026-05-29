@@ -9,6 +9,10 @@ import 'package:riftwave_music/core/audio/audio_handler.dart';
 import 'package:riftwave_music/core/database/models/song_model.dart';
 import 'package:riftwave_music/core/database/models/playlist_model.dart';
 import 'package:riftwave_music/core/database/models/history_model.dart';
+import 'package:riftwave_music/core/api/youtube_api.dart';
+import 'package:riftwave_music/core/api/saavn_api.dart';
+import 'package:riftwave_music/core/api/lrclib_api.dart';
+import 'package:riftwave_music/core/api/lastfm_api.dart';
 import 'package:riftwave_music/features/settings/controllers/settings_controller.dart';
 import 'package:riftwave_music/shared/controllers/audio_player_controller.dart';
 
@@ -23,6 +27,8 @@ void main() async {
   ));
 
   await Hive.initFlutter();
+
+  Hive.registerAdapter(MusicSourceAdapter());
   Hive.registerAdapter(SongModelAdapter());
   Hive.registerAdapter(PlaylistModelAdapter());
   Hive.registerAdapter(HistoryModelAdapter());
@@ -35,7 +41,6 @@ void main() async {
       androidNotificationOngoing: true,
       androidStopForegroundOnPause: true,
       androidNotificationIcon: 'mipmap/ic_launcher',
-
       androidNotificationClickStartsActivity: true,
       fastForwardInterval: Duration(seconds: 10),
       rewindInterval: Duration(seconds: 10),
@@ -44,6 +49,10 @@ void main() async {
 
   Get.put<RiftWaveAudioHandler>(audioHandler, permanent: true);
   Get.put(SettingsController(), permanent: true);
+  Get.put(YouTubeApi(), permanent: true);
+  Get.put(SaavnApi(), permanent: true);
+  Get.put(LrcLibApi(), permanent: true);
+  Get.put(LastFmApi(), permanent: true);
   Get.put(AudioPlayerController(), permanent: true);
 
   runApp(const RiftWaveApp());
