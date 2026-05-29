@@ -293,7 +293,6 @@ class AudioPlayerController extends GetxController {
     currentSong.value = song;
     hasSong.value = true;
 
-    // Trigger autoplay recommendations in the background if the queue is running low (< 5 songs remaining)
     final remainingInQueue = queue.length - 1 - currentQueueIndex.value;
     if (remainingInQueue < 5) {
       _fetchAndAppendSimilar(song);
@@ -304,7 +303,6 @@ class AudioPlayerController extends GetxController {
 
     SongModel activeSong = song;
 
-    // Resolve sourceId if empty (e.g. for Last.fm recommendations)
     if (activeSong.sourceId.isEmpty) {
       debugPrint('AudioPlayerController: Song sourceId is empty. Resolving via search for: ${activeSong.title} - ${activeSong.artist}');
       try {
@@ -708,7 +706,6 @@ class AudioPlayerController extends GetxController {
 
       List<SongModel> similar = [];
 
-      // Try 1: Last.fm similar tracks (Musically similar tracks, mapped to original source)
       try {
         final lastfm = Get.find<LastFmApi>();
         debugPrint('AudioPlayerController: Fetching similar songs for cleanedTitle="$cleanedTitle", artist="$primaryArtist"');
@@ -719,9 +716,7 @@ class AudioPlayerController extends GetxController {
       }
 
       if (song.source == MusicSource.youtube) {
-        // --- YOUTUBE SOURCE FLOW ---
-        
-        // Try 2: YouTube similar search for song radio/similar
+
         if (similar.isEmpty) {
           try {
             final query = '$cleanedTitle $primaryArtist radio';
@@ -732,7 +727,6 @@ class AudioPlayerController extends GetxController {
           }
         }
 
-        // Try 3: YouTube search by artist name
         if (similar.isEmpty) {
           try {
             final ytResults = await yt.search('$primaryArtist songs');
@@ -742,7 +736,6 @@ class AudioPlayerController extends GetxController {
           }
         }
 
-        // Try 4: JioSaavn similar search as a backup (mapped to YouTube source)
         if (similar.isEmpty) {
           try {
             final query = '$cleanedTitle $primaryArtist radio';
@@ -756,9 +749,7 @@ class AudioPlayerController extends GetxController {
           }
         }
       } else {
-        // --- SAAVN SOURCE FLOW ---
-        
-        // Try 2: Saavn similar search for song radio/similar
+
         if (similar.isEmpty) {
           try {
             final query = '$cleanedTitle $primaryArtist radio';
@@ -769,7 +760,6 @@ class AudioPlayerController extends GetxController {
           }
         }
 
-        // Try 3: Saavn Artist Details
         if (similar.isEmpty) {
           try {
             final artistId = await saavn.searchArtist(primaryArtist);
@@ -782,7 +772,6 @@ class AudioPlayerController extends GetxController {
           }
         }
 
-        // Try 4: YouTube similar search as a backup (mapped to Saavn source)
         if (similar.isEmpty) {
           try {
             final query = '$cleanedTitle $primaryArtist radio';
@@ -811,8 +800,7 @@ class AudioPlayerController extends GetxController {
 
   String _getCleanedTitle(String title, String artist) {
     String cleaned = title.toLowerCase();
-    
-    // Strip artist name from title if it exists at the start
+
     final cleanArtist = artist.toLowerCase().trim();
     if (cleaned.startsWith(cleanArtist)) {
       cleaned = cleaned.substring(cleanArtist.length).trim();
@@ -820,8 +808,7 @@ class AudioPlayerController extends GetxController {
         cleaned = cleaned.substring(1).trim();
       }
     }
-    
-    // Remove brackets/parentheses and standard video clutter
+
     cleaned = cleaned.replaceAll(RegExp(r'\(.*?\)'), '');
     cleaned = cleaned.replaceAll(RegExp(r'\[.*?\]'), '');
     cleaned = cleaned.replaceAll('official video', '');
@@ -832,8 +819,7 @@ class AudioPlayerController extends GetxController {
     cleaned = cleaned.replaceAll('full audio', '');
     cleaned = cleaned.replaceAll('full video', '');
     cleaned = cleaned.replaceAll('karaoke', '');
-    
-    // Remove symbols and extra whitespace
+
     cleaned = cleaned.replaceAll(RegExp(r'[^\w\s]'), '').replaceAll(RegExp(r'\s+'), ' ').trim();
     return cleaned;
   }
@@ -841,11 +827,10 @@ class AudioPlayerController extends GetxController {
   String _getPrimaryArtist(String artist) {
     if (artist.isEmpty) return '';
     String cleaned = artist;
-    
-    // Clean YouTube specific suffixes like " - Topic" or VEVO
+
     cleaned = cleaned.replaceAll(RegExp(r'\s*-\s*Topic$', caseSensitive: false), '');
     cleaned = cleaned.replaceAll(RegExp(r'\s*VEVO$', caseSensitive: false), '');
-    
+
     final dividers = [
       RegExp(r'\bfeat\.?\b', caseSensitive: false),
       RegExp(r'\bft\.?\b', caseSensitive: false),

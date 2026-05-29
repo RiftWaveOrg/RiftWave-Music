@@ -16,6 +16,8 @@ import 'package:riftwave_music/core/api/lastfm_api.dart';
 import 'package:riftwave_music/features/settings/controllers/settings_controller.dart';
 import 'package:riftwave_music/shared/controllers/audio_player_controller.dart';
 
+import 'package:riftwave_music/features/player/controllers/lyrics_controller.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -54,6 +56,7 @@ void main() async {
   Get.put(LrcLibApi(), permanent: true);
   Get.put(LastFmApi(), permanent: true);
   Get.put(AudioPlayerController(), permanent: true);
+  Get.put(LyricsController(), permanent: true);
 
   runApp(const RiftWaveApp());
 }

@@ -148,7 +148,6 @@ class _WavySeekBarPainter extends CustomPainter {
     final double progress = value / max;
     final double thumbX = progress * size.width;
 
-    // 1. Draw inactive track (straight line from thumbX to end)
     if (thumbX < size.width) {
       final Paint inactivePaint = Paint()
         ..color = inactiveColor
@@ -163,7 +162,6 @@ class _WavySeekBarPainter extends CustomPainter {
       );
     }
 
-    // 2. Draw active track (wavy line from 0 to thumbX)
     if (thumbX > 0) {
       final Paint activePaint = Paint()
         ..color = activeColor
@@ -174,13 +172,11 @@ class _WavySeekBarPainter extends CustomPainter {
       final Path activePath = Path();
       activePath.moveTo(0, centerY);
 
-      // Wave settings
-      const double wavelength = 40.0; // horizontal wavelength in pixels
-      final double maxAmplitude = isPlaying ? 4.5 : 1.0; // smaller wave when paused, larger when playing
+      const double wavelength = 40.0;
+      final double maxAmplitude = isPlaying ? 4.5 : 1.0;
 
-      // Draw the wave as a series of connected points
       for (double x = 0; x <= thumbX; x += 2.0) {
-        // Fade the wave amplitude slightly near the start and end (thumb) for smooth transitions
+
         double factor = 1.0;
         if (x < 20) {
           factor = x / 20;
@@ -195,13 +191,11 @@ class _WavySeekBarPainter extends CustomPainter {
       canvas.drawPath(activePath, activePaint);
     }
 
-    // 3. Draw thumb overlay (glow effect)
     final Paint thumbGlow = Paint()
       ..color = activeColor.withAlpha(40)
       ..style = PaintingStyle.fill;
     canvas.drawCircle(Offset(thumbX, centerY), 11, thumbGlow);
 
-    // 4. Draw thumb
     final Paint thumbPaint = Paint()
       ..color = thumbColor
       ..style = PaintingStyle.fill;
