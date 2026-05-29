@@ -12,7 +12,7 @@ class MainNavigation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final navController = Get.put(_MainNavController());
+    final navController = Get.put(MainNavController());
     final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -87,7 +87,7 @@ class MainNavigation extends StatelessWidget {
   }
 }
 
-class _MainNavController extends GetxController {
+class MainNavController extends GetxController {
   final RxInt currentIndex = 0.obs;
 
   void changeTab(int index) {
