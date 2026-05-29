@@ -48,6 +48,10 @@ jobs:
       - name: Install Project Dependencies
         run: flutter pub get
 
+      - name: Create .env file
+        run: echo "LASTFM_API_KEY=${{ secrets.LASTFM_API_KEY }}" > .env
+        shell: bash
+
       - name: Build Android APK
         if: matrix.target == 'apk'
         run: flutter build apk --release
