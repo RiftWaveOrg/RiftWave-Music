@@ -181,6 +181,20 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
                         letterSpacing: 1.2,
                       ),
                     ),
+                    if (queue.isNotEmpty)
+                      TextButton.icon(
+                        onPressed: () {
+                          _audioController.clearQueue();
+                          Get.back();
+                        },
+                        icon: Icon(Icons.delete_sweep_rounded, color: colors.textSecondary, size: 18),
+                        label: Text('Clear', style: TextStyle(color: colors.textSecondary, fontSize: 12)),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -197,72 +211,93 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
                   )
                 else
                   Expanded(
-                    child: ListView.builder(
-                      itemCount: queue.length,
-                      physics: const BouncingScrollPhysics(),
-                      itemBuilder: (context, index) {
-                        final song = queue[index];
-                        final isPlaying = index == currentIndex;
+                    child: Theme(
+                      data: Theme.of(context).copyWith(
+                        canvasColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                      ),
+                      child: ReorderableListView.builder(
+                        itemCount: queue.length,
+                        physics: const BouncingScrollPhysics(),
+                        onReorder: (oldIndex, newIndex) {
+                          if (oldIndex < newIndex) {
+                            newIndex -= 1;
+                          }
+                          _audioController.reorderQueue(oldIndex, newIndex);
+                        },
+                        itemBuilder: (context, index) {
+                          final song = queue[index];
+                          final isPlaying = index == currentIndex;
 
-                        return Dismissible(
-                          key: ValueKey('${song.id}_$index'),
-                          direction: DismissDirection.endToStart,
-                          background: const SizedBox.shrink(),
-                          onDismissed: (direction) {
-                            _audioController.removeFromQueue(index);
-                          },
-                          child: Container(
-                            margin: const EdgeInsets.symmetric(vertical: 4),
-                            decoration: BoxDecoration(
-                              color: isPlaying ? colors.accent.withAlpha(25) : Colors.transparent,
-                              borderRadius: BorderRadius.circular(12),
+                          return Dismissible(
+                            key: ValueKey('${song.id}_$index'),
+                            direction: DismissDirection.endToStart,
+                            background: const SizedBox.shrink(),
+                            onDismissed: (direction) {
+                              _audioController.removeFromQueue(index);
+                            },
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(vertical: 4),
+                              decoration: BoxDecoration(
+                                color: isPlaying ? colors.accent.withAlpha(25) : Colors.transparent,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                                leading: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Container(
+                                    width: 44,
+                                    height: 44,
+                                    color: colors.accent.withAlpha(15),
+                                    child: song.thumbnailUrl.isNotEmpty
+                                        ? CachedNetworkImage(
+                                            imageUrl: song.thumbnailUrl,
+                                            fit: BoxFit.cover,
+                                            errorWidget: (_, __, ___) => Icon(Icons.music_note_rounded, color: colors.accent),
+                                          )
+                                        : Icon(Icons.music_note_rounded, color: colors.accent),
+                                  ),
+                                ),
+                                title: Text(
+                                  song.title,
+                                  style: TextStyle(
+                                    color: isPlaying ? colors.accent : colors.textPrimary,
+                                    fontWeight: isPlaying ? FontWeight.bold : FontWeight.w500,
+                                    fontSize: 14,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                subtitle: Text(
+                                  song.artist,
+                                  style: TextStyle(
+                                    color: isPlaying ? colors.accent.withAlpha(180) : colors.textSecondary,
+                                    fontSize: 12,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (isPlaying)
+                                      Icon(Icons.volume_up_rounded, color: colors.accent, size: 20),
+                                    const SizedBox(width: 12),
+                                    ReorderableDragStartListener(
+                                      index: index,
+                                      child: Icon(Icons.drag_handle_rounded, color: colors.textSecondary.withAlpha(100), size: 20),
+                                    ),
+                                  ],
+                                ),
+                                onTap: () {
+                                  _audioController.playFromQueue(index);
+                                },
+                              ),
                             ),
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                              leading: ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Container(
-                                  width: 44,
-                                  height: 44,
-                                  color: colors.accent.withAlpha(15),
-                                  child: song.thumbnailUrl.isNotEmpty
-                                      ? CachedNetworkImage(
-                                          imageUrl: song.thumbnailUrl,
-                                          fit: BoxFit.cover,
-                                          errorWidget: (_, __, ___) => Icon(Icons.music_note_rounded, color: colors.accent),
-                                        )
-                                      : Icon(Icons.music_note_rounded, color: colors.accent),
-                                ),
-                              ),
-                              title: Text(
-                                song.title,
-                                style: TextStyle(
-                                  color: isPlaying ? colors.accent : colors.textPrimary,
-                                  fontWeight: isPlaying ? FontWeight.bold : FontWeight.w500,
-                                  fontSize: 14,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              subtitle: Text(
-                                song.artist,
-                                style: TextStyle(
-                                  color: isPlaying ? colors.accent.withAlpha(180) : colors.textSecondary,
-                                  fontSize: 12,
-                                ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              trailing: isPlaying
-                                  ? Icon(Icons.volume_up_rounded, color: colors.accent, size: 20)
-                                  : null,
-                              onTap: () {
-                                _audioController.playFromQueue(index);
-                              },
-                            ),
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     ),
                   ),
               ],

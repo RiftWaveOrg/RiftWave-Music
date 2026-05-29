@@ -740,6 +740,7 @@ class AudioPlayerController extends GetxController {
     final origClean = originalClean.toLowerCase();
     
     if (origClean.isEmpty || candClean.isEmpty) return false;
+    if (candClean == origClean) return true;
     if (candClean.contains(origClean) || origClean.contains(candClean)) return true;
     
     final origWords = origClean.split(' ').where((w) => w.length > 2).toSet();
@@ -747,7 +748,8 @@ class AudioPlayerController extends GetxController {
     if (origWords.isEmpty || candWords.isEmpty) return false;
     
     final overlap = origWords.intersection(candWords).length;
-    if (overlap >= origWords.length * 0.7 || overlap >= candWords.length * 0.7) return true;
+    // Aggressively filter out songs that have 50%+ matching core words (titles)
+    if (overlap >= origWords.length * 0.5 || overlap >= candWords.length * 0.5) return true;
     
     return false;
   }
@@ -861,9 +863,18 @@ class AudioPlayerController extends GetxController {
       if (currentSong.value?.id == song.id && similar.isNotEmpty) {
         final currentQueue = List<SongModel>.from(queue);
         final existingIds = currentQueue.map((s) => s.id).toSet();
-        final newSongs = similar.where((s) => !existingIds.contains(s.id)).take(15);
+        final newSongs = similar.where((s) => !existingIds.contains(s.id)).take(15).toList();
         queue.addAll(newSongs);
         _persistQueue();
+        
+        _resolveThumbnailsAsync(newSongs).then((resolved) {
+          for (final resolvedSong in resolved) {
+            final idx = queue.indexWhere((q) => q.id == resolvedSong.id);
+            if (idx != -1 && resolvedSong.thumbnailUrl.isNotEmpty) {
+              queue[idx] = resolvedSong;
+            }
+          }
+        });
       }
     } catch (e) {
       Get.log('Error fetching similar songs for autoplay: $e');
@@ -873,8 +884,19 @@ class AudioPlayerController extends GetxController {
   String _getCleanedTitle(String title, String artist) {
     String cleaned = title.toLowerCase();
 
+    if (cleaned.contains('|')) {
+      cleaned = cleaned.split('|').first.trim();
+    }
+    
+    if (cleaned.contains('-') && !cleaned.startsWith('-')) {
+      final parts = cleaned.split('-');
+      if (parts.length > 1 && parts[1].toLowerCase().contains(artist.toLowerCase().trim())) {
+        cleaned = parts.first.trim();
+      }
+    }
+
     final cleanArtist = artist.toLowerCase().trim();
-    if (cleaned.startsWith(cleanArtist)) {
+    if (cleanArtist.isNotEmpty && cleaned.startsWith(cleanArtist)) {
       cleaned = cleaned.substring(cleanArtist.length).trim();
       if (cleaned.startsWith('-') || cleaned.startsWith(':') || cleaned.startsWith('|')) {
         cleaned = cleaned.substring(1).trim();
@@ -883,14 +905,11 @@ class AudioPlayerController extends GetxController {
 
     cleaned = cleaned.replaceAll(RegExp(r'\(.*?\)'), '');
     cleaned = cleaned.replaceAll(RegExp(r'\[.*?\]'), '');
-    cleaned = cleaned.replaceAll('official video', '');
-    cleaned = cleaned.replaceAll('official audio', '');
-    cleaned = cleaned.replaceAll('official music video', '');
-    cleaned = cleaned.replaceAll('lyrics', '');
-    cleaned = cleaned.replaceAll('lyric video', '');
-    cleaned = cleaned.replaceAll('full audio', '');
-    cleaned = cleaned.replaceAll('full video', '');
-    cleaned = cleaned.replaceAll('karaoke', '');
+    
+    final removeWords = ['official video', 'official audio', 'official music video', 'lyrics', 'lyric video', 'full audio', 'full video', 'karaoke', 'cover', 'remix', 'mashup', 'slowed', 'reverb', 'unplugged', 'audio song'];
+    for (final word in removeWords) {
+      cleaned = cleaned.replaceAll(word, '');
+    }
 
     cleaned = cleaned.replaceAll(RegExp(r'[^\w\s]'), '').replaceAll(RegExp(r'\s+'), ' ').trim();
     return cleaned;

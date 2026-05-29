@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:riftwave_music/features/search/controllers/search_controller.dart';
+import 'package:riftwave_music/features/settings/controllers/settings_controller.dart';
 import 'package:riftwave_music/shared/controllers/audio_player_controller.dart';
 import 'package:riftwave_music/shared/widgets/song_tile.dart';
 import 'package:riftwave_music/core/database/models/song_model.dart';
@@ -308,16 +309,69 @@ class SearchScreen extends GetView<MusicSearchController> {
   }
 
   Widget _buildBrowseCategories(ColorScheme colorScheme, ThemeData theme) {
-    final categories = [
-      {'name': 'Hindi', 'icon': Icons.music_note_rounded, 'color': 0xFFE91E63},
-      {'name': 'Pop', 'icon': Icons.star_rounded, 'color': 0xFF9C27B0},
-      {'name': 'Rock', 'icon': Icons.electric_bolt_rounded, 'color': 0xFFFF5722},
-      {'name': 'Hip Hop', 'icon': Icons.headphones_rounded, 'color': 0xFF2196F3},
-      {'name': 'Electronic', 'icon': Icons.equalizer_rounded, 'color': 0xFF00BCD4},
-      {'name': 'Lo-Fi', 'icon': Icons.nightlight_rounded, 'color': 0xFF607D8B},
-      {'name': 'Bollywood', 'icon': Icons.movie_rounded, 'color': 0xFFFF9800},
-      {'name': 'Devotional', 'icon': Icons.self_improvement_rounded, 'color': 0xFF4CAF50},
-    ];
+    List<Map<String, dynamic>> categories = [];
+    
+    try {
+      final regionCode = Get.find<SettingsController>().regionCode.value;
+      if (regionCode == 'IN') {
+        categories = [
+          {'name': 'Hindi', 'icon': Icons.music_note_rounded, 'color': 0xFFE91E63},
+          {'name': 'Bollywood', 'icon': Icons.movie_rounded, 'color': 0xFFFF9800},
+          {'name': 'Punjabi', 'icon': Icons.star_rounded, 'color': 0xFF9C27B0},
+          {'name': 'Tamil', 'icon': Icons.library_music_rounded, 'color': 0xFF2196F3},
+          {'name': 'Telugu', 'icon': Icons.electric_bolt_rounded, 'color': 0xFFFF5722},
+          {'name': 'Lo-Fi', 'icon': Icons.nightlight_rounded, 'color': 0xFF607D8B},
+          {'name': 'Devotional', 'icon': Icons.self_improvement_rounded, 'color': 0xFF4CAF50},
+          {'name': 'Pop', 'icon': Icons.headphones_rounded, 'color': 0xFF00BCD4},
+        ];
+      } else if (regionCode == 'US' || regionCode == 'GB') {
+        categories = [
+          {'name': 'Pop', 'icon': Icons.star_rounded, 'color': 0xFF9C27B0},
+          {'name': 'Hip Hop', 'icon': Icons.headphones_rounded, 'color': 0xFF2196F3},
+          {'name': 'Rock', 'icon': Icons.electric_bolt_rounded, 'color': 0xFFFF5722},
+          {'name': 'R&B', 'icon': Icons.favorite_rounded, 'color': 0xFFE91E63},
+          {'name': 'Electronic', 'icon': Icons.equalizer_rounded, 'color': 0xFF00BCD4},
+          {'name': 'Country', 'icon': Icons.landscape_rounded, 'color': 0xFF4CAF50},
+          {'name': 'Jazz', 'icon': Icons.music_note_rounded, 'color': 0xFFFF9800},
+          {'name': 'Lo-Fi', 'icon': Icons.nightlight_rounded, 'color': 0xFF607D8B},
+        ];
+      } else if (regionCode == 'JP' || regionCode == 'KR') {
+        categories = [
+          {'name': 'K-Pop', 'icon': Icons.star_rounded, 'color': 0xFFE91E63},
+          {'name': 'J-Pop', 'icon': Icons.music_note_rounded, 'color': 0xFF9C27B0},
+          {'name': 'Anime', 'icon': Icons.movie_rounded, 'color': 0xFFFF5722},
+          {'name': 'Hip Hop', 'icon': Icons.headphones_rounded, 'color': 0xFF2196F3},
+          {'name': 'Electronic', 'icon': Icons.equalizer_rounded, 'color': 0xFF00BCD4},
+          {'name': 'Rock', 'icon': Icons.electric_bolt_rounded, 'color': 0xFFFF9800},
+          {'name': 'Lo-Fi', 'icon': Icons.nightlight_rounded, 'color': 0xFF607D8B},
+          {'name': 'Classical', 'icon': Icons.piano_rounded, 'color': 0xFF4CAF50},
+        ];
+      } else if (regionCode == 'ES' || regionCode == 'MX' || regionCode == 'AR') {
+        categories = [
+          {'name': 'Latin Pop', 'icon': Icons.star_rounded, 'color': 0xFFE91E63},
+          {'name': 'Reggaeton', 'icon': Icons.local_fire_department_rounded, 'color': 0xFFFF5722},
+          {'name': 'Hip Hop', 'icon': Icons.headphones_rounded, 'color': 0xFF2196F3},
+          {'name': 'Rock', 'icon': Icons.electric_bolt_rounded, 'color': 0xFF9C27B0},
+          {'name': 'Electronic', 'icon': Icons.equalizer_rounded, 'color': 0xFF00BCD4},
+          {'name': 'Regional', 'icon': Icons.landscape_rounded, 'color': 0xFF4CAF50},
+          {'name': 'Salsa', 'icon': Icons.music_note_rounded, 'color': 0xFFFF9800},
+          {'name': 'Lo-Fi', 'icon': Icons.nightlight_rounded, 'color': 0xFF607D8B},
+        ];
+      }
+    } catch (_) {}
+    
+    if (categories.isEmpty) {
+      categories = [
+        {'name': 'Pop', 'icon': Icons.star_rounded, 'color': 0xFF9C27B0},
+        {'name': 'Rock', 'icon': Icons.electric_bolt_rounded, 'color': 0xFFFF5722},
+        {'name': 'Hip Hop', 'icon': Icons.headphones_rounded, 'color': 0xFF2196F3},
+        {'name': 'Electronic', 'icon': Icons.equalizer_rounded, 'color': 0xFF00BCD4},
+        {'name': 'Lo-Fi', 'icon': Icons.nightlight_rounded, 'color': 0xFF607D8B},
+        {'name': 'Jazz', 'icon': Icons.music_note_rounded, 'color': 0xFFFF9800},
+        {'name': 'Classical', 'icon': Icons.piano_rounded, 'color': 0xFF4CAF50},
+        {'name': 'Global', 'icon': Icons.public_rounded, 'color': 0xFFE91E63},
+      ];
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
