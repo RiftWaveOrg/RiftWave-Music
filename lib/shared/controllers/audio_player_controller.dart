@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:math';
 
 import 'package:audio_service/audio_service.dart';
@@ -13,8 +14,9 @@ import 'package:riftwave_music/core/database/models/song_model.dart';
 import 'package:riftwave_music/core/api/youtube_api.dart';
 import 'package:riftwave_music/core/api/saavn_api.dart';
 import 'package:riftwave_music/core/api/lastfm_api.dart';
+import 'package:riftwave_music/features/settings/controllers/settings_controller.dart';
+import 'package:riftwave_music/features/library/controllers/library_controller.dart';
 import 'package:riftwave_music/features/player/controllers/dynamic_color_controller.dart';
-import 'package:riftwave_music/shared/controllers/history_controller.dart';
 import 'package:riftwave_music/core/services/recommendation_engine.dart';
 
 class AudioPlayerController extends GetxController {
@@ -359,9 +361,38 @@ class AudioPlayerController extends GetxController {
 
     String streamUrl = '';
     bool success = false;
+    bool isLocal = false;
 
-    try {
-      debugPrint('AudioPlayerController: Trying primary source (${activeSong.source.name}) for: ${activeSong.title}');
+    if (activeSong.isDownloaded && activeSong.localPath != null) {
+      final file = File(activeSong.localPath!);
+      if (await file.exists()) {
+        streamUrl = Uri.file(activeSong.localPath!).toString();
+        isLocal = true;
+      }
+    }
+
+    if (isLocal) {
+      try {
+        final mediaItem = MediaItem(
+          id: activeSong.id,
+          title: activeSong.title,
+          artist: activeSong.artist,
+          album: activeSong.album,
+          duration: Duration(milliseconds: activeSong.durationMs),
+          artUri: activeSong.thumbnailUrl.isNotEmpty ? Uri.parse(activeSong.thumbnailUrl) : null,
+        );
+        await _audioHandler.setMediaItemAndPlay(mediaItem, streamUrl);
+        success = true;
+        debugPrint('AudioPlayerController: Playing from local download successfully!');
+      } catch (e) {
+        debugPrint('AudioPlayerController: Failed to play local file: $e');
+        isLocal = false;
+      }
+    }
+
+    if (!success) {
+      try {
+        debugPrint('AudioPlayerController: Trying primary source (${activeSong.source.name}) for: ${activeSong.title}');
       if (activeSong.source == MusicSource.youtube) {
         streamUrl = await Get.find<YouTubeApi>().getStreamUrl(activeSong.sourceId.isNotEmpty ? activeSong.sourceId : activeSong.id);
       } else {
@@ -382,6 +413,7 @@ class AudioPlayerController extends GetxController {
       debugPrint('AudioPlayerController: Primary source loaded and playing successfully!');
     } catch (e) {
       debugPrint('AudioPlayerController: Primary source failed: $e. Initiating fallback search...');
+    }
     }
 
     if (!success) {
@@ -459,13 +491,13 @@ class AudioPlayerController extends GetxController {
         debugPrint('AudioPlayerController: Fallback source failed: $fallbackError');
         errorMessage.value = 'Failed to load audio: $fallbackError';
       }
+    }
 
-      if (success) {
-        try {
-          Get.find<HistoryController>().addToHistory(activeSong);
-        } catch (e) {
-          debugPrint('AudioPlayerController: Failed to add to history: $e');
-        }
+    if (success) {
+      try {
+        Get.find<LibraryController>().addToHistory(activeSong);
+      } catch (e) {
+        debugPrint('AudioPlayerController: Failed to add to history: $e');
       }
     }
   }

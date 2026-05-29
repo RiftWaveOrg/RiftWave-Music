@@ -294,9 +294,9 @@ class SaavnApi extends GetxService {
         final albums = data['albums'] as List<dynamic>?;
         if (albums != null && albums.isNotEmpty) {
           return albums.map((a) => {
-            'id': a['id'] as String? ?? '',
-            'name': a['name'] as String? ?? '',
-            'artist': a['primaryArtists'] as String? ?? a['artists'] as String? ?? 'Unknown Artist',
+            'id': a['id']?.toString() ?? '',
+            'name': a['name']?.toString() ?? '',
+            'artist': _extractArtists(a['primaryArtists'] ?? a['artists']),
             'thumbnailUrl': _extractImage(a['image']),
           }).toList();
         }
@@ -382,8 +382,8 @@ class SaavnApi extends GetxService {
 
       songs.add(SongModel(
         id: id,
-        title: s['name'] as String? ?? '',
-        artist: s['primaryArtists'] as String? ?? s['artists'] as String? ?? 'Unknown Artist',
+        title: s['name']?.toString() ?? '',
+        artist: _extractArtists(s['primaryArtists'] ?? s['artists']),
         album: albumName,
         thumbnailUrl: _extractImage(s['image']),
         audioUrl: '',
@@ -395,9 +395,23 @@ class SaavnApi extends GetxService {
     return songs;
   }
 
+  String _extractArtists(dynamic artistsData) {
+    if (artistsData is String) return artistsData;
+    if (artistsData is List) {
+      final names = artistsData.map((e) {
+        if (e is Map) return e['name']?.toString() ?? '';
+        return e.toString();
+      }).where((e) => e.isNotEmpty).toList();
+      if (names.isNotEmpty) return names.join(', ');
+    }
+    return 'Unknown Artist';
+  }
+
   String _extractImage(dynamic imageData) {
     if (imageData is List && imageData.isNotEmpty) {
-      return imageData.last['link'] as String? ?? '';
+      final last = imageData.last;
+      if (last is Map) return last['link']?.toString() ?? last['url']?.toString() ?? '';
+      return last.toString();
     } else if (imageData is String) {
       return imageData;
     }

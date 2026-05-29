@@ -14,8 +14,11 @@ import 'package:riftwave_music/features/player/controllers/lyrics_controller.dar
 import 'package:riftwave_music/features/player/models/player_colors.dart';
 import 'package:riftwave_music/features/library/controllers/library_controller.dart';
 import 'package:riftwave_music/shared/controllers/audio_player_controller.dart';
+import 'package:riftwave_music/shared/controllers/download_controller.dart';
+import 'package:riftwave_music/shared/widgets/playlist_selector_sheet.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:riftwave_music/features/player/widgets/wavy_seekbar.dart';
+import 'package:riftwave_music/shared/widgets/download_progress_indicator.dart';
 
 class PlayerScreen extends StatefulWidget {
   const PlayerScreen({super.key});
@@ -646,28 +649,76 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
             ],
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 8),
         if (song != null)
-          Obx(() {
-            final libraryController = Get.find<LibraryController>();
-            final liked = libraryController.isLiked(song.id);
-            return GestureDetector(
-              onTap: () {
-                libraryController.toggleLike(song);
-                _likeController.forward(from: 0.8).then((_) {
-                  _likeController.animateTo(1.0, curve: Curves.elasticOut);
-                });
-              },
-              child: ScaleTransition(
-                scale: _likeController,
-                child: Icon(
-                  liked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                  color: liked ? colors.accent : colors.textSecondary,
-                  size: 28,
-                ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: Icon(Icons.playlist_add_rounded, color: colors.textSecondary, size: 26),
+                onPressed: () {
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (context) => PlaylistSelectorSheet(song: song),
+                  );
+                },
               ),
-            );
-          }),
+              Obx(() {
+                final downloader = Get.find<DownloadController>();
+                final libraryController = Get.find<LibraryController>();
+                
+                downloader.downloadProgress.length;
+                libraryController.downloadedSongs.length;
+                
+                final progress = downloader.downloadProgress[song.id];
+                if (progress != null) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: DownloadProgressIndicator(
+                      progress: progress,
+                      color: colors.accent,
+                    ),
+                  );
+                } else if (song.isDownloaded || libraryController.downloadedSongs.any((s) => s.id == song.id)) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: Icon(Icons.download_done_rounded, color: colors.accent, size: 26),
+                  );
+                }
+                
+                return IconButton(
+                  icon: Icon(Icons.download_rounded, color: colors.textSecondary, size: 26),
+                  onPressed: () => downloader.downloadSong(song),
+                );
+              }),
+              Obx(() {
+                final libraryController = Get.find<LibraryController>();
+                libraryController.likedSongs.length; // Force Obx registration
+                final liked = libraryController.isLiked(song.id);
+                return GestureDetector(
+                  onTap: () {
+                    libraryController.toggleLike(song);
+                    _likeController.forward(from: 0.8).then((_) {
+                      _likeController.animateTo(1.0, curve: Curves.elasticOut);
+                    });
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 4, right: 8),
+                    child: ScaleTransition(
+                      scale: _likeController,
+                      child: Icon(
+                        liked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                        color: liked ? colors.accent : colors.textSecondary,
+                        size: 28,
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
       ],
     );
   }

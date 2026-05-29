@@ -173,6 +173,7 @@ class SearchScreen extends GetView<MusicSearchController> {
                                         title: song.title,
                                         artist: song.artist,
                                         thumbnailUrl: song.thumbnailUrl,
+                                        song: song,
                                         isPlaying: isCurrent && playerController.isPlaying.value,
                                         onTap: () {
                                           playerController.playSong(song);

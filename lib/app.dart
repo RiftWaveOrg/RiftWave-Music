@@ -22,7 +22,7 @@ class RiftWaveApp extends StatelessWidget {
               : AppTheme.dark(dynamicColorScheme: darkDynamic);
 
           return GetMaterialApp(
-            title: 'RiftWave Music',
+            title: 'RiftWave',
             debugShowCheckedModeBanner: false,
             theme: theme,
             darkTheme: theme,

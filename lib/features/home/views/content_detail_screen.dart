@@ -236,7 +236,10 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
-      bottomNavigationBar: const MiniPlayer(),
+      bottomNavigationBar: const SafeArea(
+        top: false,
+        child: MiniPlayer(),
+      ),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,

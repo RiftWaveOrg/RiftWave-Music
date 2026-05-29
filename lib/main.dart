@@ -17,8 +17,9 @@ import 'package:riftwave_music/features/settings/controllers/settings_controller
 import 'package:riftwave_music/shared/controllers/audio_player_controller.dart';
 
 import 'package:riftwave_music/features/player/controllers/lyrics_controller.dart';
-import 'package:riftwave_music/shared/controllers/history_controller.dart';
 import 'package:riftwave_music/core/services/recommendation_engine.dart';
+import 'package:riftwave_music/features/library/controllers/library_controller.dart';
+import 'package:riftwave_music/shared/controllers/download_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -41,7 +42,7 @@ void main() async {
     builder: () => RiftWaveAudioHandler(),
     config: const AudioServiceConfig(
       androidNotificationChannelId: 'com.riftwavemusic.app.channel.audio',
-      androidNotificationChannelName: 'RiftWave Music',
+      androidNotificationChannelName: 'RiftWave',
       androidNotificationOngoing: true,
       androidStopForegroundOnPause: true,
       androidNotificationIcon: 'mipmap/ic_launcher',
@@ -59,8 +60,11 @@ void main() async {
   Get.put(LastFmApi(), permanent: true);
   Get.put(AudioPlayerController(), permanent: true);
   Get.put(LyricsController(), permanent: true);
-  Get.put(HistoryController(), permanent: true);
   Get.put(RecommendationEngine(), permanent: true);
+  
+  // Phase 8 Controllers
+  Get.put(DownloadController(), permanent: true);
+  Get.lazyPut(() => LibraryController(), fenix: true);
 
   runApp(const RiftWaveApp());
 }
