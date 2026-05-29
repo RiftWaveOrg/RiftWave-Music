@@ -69,12 +69,16 @@ class MainNavigation extends StatelessWidget {
                 label: 'Library',
               ),
               NavigationDestination(
-                icon: Icon(
-                  Icons.settings_outlined,
+                icon: Image.asset(
+                  'assets/images/RiftWave_logo.png',
+                  width: 24,
+                  height: 24,
                   color: colorScheme.onSurface.withAlpha(153),
                 ),
-                selectedIcon: Icon(
-                  Icons.settings_rounded,
+                selectedIcon: Image.asset(
+                  'assets/images/RiftWave_logo.png',
+                  width: 24,
+                  height: 24,
                   color: colorScheme.primary,
                 ),
                 label: 'Settings',
