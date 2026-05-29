@@ -7,7 +7,6 @@ import 'package:riftwave_music/shared/widgets/song_tile.dart';
 import 'package:riftwave_music/core/database/models/song_model.dart';
 import 'package:riftwave_music/routes/app_routes.dart';
 
-
 class SearchScreen extends GetView<RiftSearchController> {
   const SearchScreen({super.key});
 

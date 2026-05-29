@@ -79,9 +79,6 @@ void main() {
         source: MusicSource.saavn,
       );
 
-      // Parentheses/brackets are stripped:
-      // "cheap thrills" vs "cheap thrills" -> Match!
-      // "sia feat sean paul" contains "sia" -> Match!
       expect(AudioPlayerController.isSongMatch(original, fallback), isTrue);
     });
 
@@ -108,9 +105,6 @@ void main() {
         source: MusicSource.saavn,
       );
 
-      // Under a greedy match, everything from the first "(" to the last ")" would be deleted,
-      // changing the title to just "Song Title ".
-      // Under our non-greedy match, "Middle Text" is preserved, ensuring a perfect match!
       expect(AudioPlayerController.isSongMatch(original, fallback), isTrue);
     });
 
@@ -141,7 +135,7 @@ void main() {
     });
 
     test('Title 70% word overlap match', () {
-      // Let's test the 70% logic:
+
       final orig = SongModel(
         id: '1',
         title: 'Shape of You Radio',
@@ -164,12 +158,6 @@ void main() {
         source: MusicSource.saavn,
       );
 
-      // origWords of length > 2 are 'shape', 'you', 'radio' (3 words).
-      // Matches in fall: 'shape' (yes), 'you' (yes). That is 2/3 = 66.6%.
-      // Let's test 'Shape of You Edit' (origWords: shape, you, edit -> 3 words).
-      // Matches in fall: 'shape' (yes), 'you' (yes).
-      // Let's use 'Shape Of You Studio Version' -> words: shape, studio, version (3 words). Matches: shape. 1/3 = 33%.
-      
       expect(AudioPlayerController.isSongMatch(orig, fall), isTrue);
     });
 

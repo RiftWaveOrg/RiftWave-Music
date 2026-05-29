@@ -13,7 +13,6 @@ class LastFmApi extends GetxService {
     receiveTimeout: const Duration(seconds: 10),
   ));
 
-  // Initialize to working fallback synchronously to prevent LateInitializationErrors.
   String _apiKey = 'b6096b3e21b6fe47b25cfe964c00502b';
 
   @override
@@ -24,14 +23,13 @@ class LastFmApi extends GetxService {
 
   Future<void> _initApiKey() async {
     try {
-      // 1. Try checking compile-time environment definitions (e.g. --dart-define-from-file=.env)
+
       const envKey = String.fromEnvironment('LASTFM_API_KEY');
       if (envKey.isNotEmpty) {
         _apiKey = envKey;
         return;
       }
 
-      // 2. Try loading from packaged .env asset via rootBundle
       try {
         final content = await rootBundle.loadString('.env');
         final lines = content.split('\n');
@@ -46,7 +44,6 @@ class LastFmApi extends GetxService {
         }
       } catch (_) {}
 
-      // 3. Try loading from local File (useful for desktop targets and test environments)
       final file = File('.env');
       if (await file.exists()) {
         final lines = await file.readAsLines();
@@ -65,8 +62,8 @@ class LastFmApi extends GetxService {
 
   Future<List<SongModel>> getSimilarSongs(String artist, String title) async {
     try {
-      final keyPreview = _apiKey.length > 8 
-          ? '${_apiKey.substring(0, 4)}...${_apiKey.substring(_apiKey.length - 4)}' 
+      final keyPreview = _apiKey.length > 8
+          ? '${_apiKey.substring(0, 4)}...${_apiKey.substring(_apiKey.length - 4)}'
           : _apiKey;
       debugPrint('LastFmApi.getSimilarSongs: querying artist="$artist", track="$title" with apiKey="$keyPreview"');
       final response = await _dio.get('', queryParameters: {
@@ -132,8 +129,8 @@ class LastFmApi extends GetxService {
 
   Future<String> getArtistBio(String artist) async {
     try {
-      final keyPreview = _apiKey.length > 8 
-          ? '${_apiKey.substring(0, 4)}...${_apiKey.substring(_apiKey.length - 4)}' 
+      final keyPreview = _apiKey.length > 8
+          ? '${_apiKey.substring(0, 4)}...${_apiKey.substring(_apiKey.length - 4)}'
           : _apiKey;
       debugPrint('LastFmApi.getArtistBio: querying artist="$artist" with apiKey="$keyPreview"');
       final response = await _dio.get('', queryParameters: {

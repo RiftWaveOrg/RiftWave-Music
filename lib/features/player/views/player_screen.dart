@@ -4,14 +4,17 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:lottie/lottie.dart';
 import 'package:riftwave_music/core/audio/repeat_mode.dart';
 import 'package:riftwave_music/core/utils/duration_formatter.dart';
 import 'package:riftwave_music/core/database/models/song_model.dart';
 import 'package:riftwave_music/features/player/controllers/player_controller.dart';
 import 'package:riftwave_music/features/player/controllers/dynamic_color_controller.dart';
+import 'package:riftwave_music/features/player/controllers/lyrics_controller.dart';
 import 'package:riftwave_music/features/player/models/player_colors.dart';
 import 'package:riftwave_music/features/library/controllers/library_controller.dart';
 import 'package:riftwave_music/shared/controllers/audio_player_controller.dart';
+import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:riftwave_music/features/player/widgets/wavy_seekbar.dart';
 
 class PlayerScreen extends StatefulWidget {
@@ -26,6 +29,7 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
   late final AudioPlayerController _audioController;
   late final DynamicColorController _colorController;
   late final PlayerController _playerController;
+  late final LyricsController _lyricsController;
   late final ScrollController _pageScrollController;
   final GlobalKey _lyricsKey = GlobalKey();
   final GlobalKey _bioKey = GlobalKey();
@@ -37,6 +41,7 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
     _audioController = Get.find<AudioPlayerController>();
     _colorController = Get.find<DynamicColorController>();
     _playerController = Get.find<PlayerController>();
+    _lyricsController = Get.find<LyricsController>();
 
     _likeController = AnimationController(
       vsync: this,
@@ -827,8 +832,6 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
     );
   }
 
-
-
   Widget _buildLyricsSection(PlayerColors colors) {
     return AnimatedContainer(
       key: _lyricsKey,
@@ -867,69 +870,76 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
 
   Widget _buildLyricsContent(PlayerColors colors) {
     return Obx(() {
-      if (_playerController.isLoadingLyrics.value) {
+      if (_lyricsController.isLoading.value) {
         return _loadingPlaceholder(colors);
       }
 
       final containerHeight = MediaQuery.of(context).size.height * 0.40;
 
-      if (_playerController.parsedLyrics.isNotEmpty) {
-        int lastActiveIndex = -1;
+      if (_lyricsController.hasSyncedLyrics.value) {
 
-        return Obx(() {
-          final currentPos = _audioController.currentPosition.value;
-
-          int activeIndex = -1;
-          for (int i = 0; i < _playerController.parsedLyrics.length; i++) {
-            if (_playerController.parsedLyrics[i].time <= currentPos) {
-              activeIndex = i;
-            } else {
-              break;
-            }
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!_lyricsController.isAutoScrollPaused.value) {
+            _lyricsController.scrollToActiveLine();
           }
+        });
 
-          if (activeIndex != -1 && activeIndex != lastActiveIndex && _playerController.lyricsScrollController.hasClients) {
-            lastActiveIndex = activeIndex;
-            final targetOffset = (activeIndex * 52.0) - (containerHeight / 2.0) + 26.0;
-            _playerController.lyricsScrollController.animateTo(
-              targetOffset.clamp(0.0, _playerController.lyricsScrollController.position.maxScrollExtent),
-              duration: const Duration(milliseconds: 300),
-              curve: Curves.easeInOut,
-            );
-          }
-
-          return SizedBox(
-            height: containerHeight,
+        return SizedBox(
+          height: containerHeight,
+          child: NotificationListener<UserScrollNotification>(
+            onNotification: (notification) {
+              if (notification.direction != ScrollDirection.idle) {
+                _lyricsController.onUserScroll();
+              }
+              return false;
+            },
             child: ListView.builder(
-              controller: _playerController.lyricsScrollController,
+              controller: _lyricsController.scrollController,
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-              itemCount: _playerController.parsedLyrics.length,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 0),
+              itemCount: _lyricsController.syncedLyrics.length,
               itemBuilder: (context, index) {
-                final line = _playerController.parsedLyrics[index];
-                final isActive = index == activeIndex;
+                final line = _lyricsController.syncedLyrics[index];
 
-                return AnimatedDefaultTextStyle(
-                  duration: const Duration(milliseconds: 200),
-                  style: TextStyle(
-                    color: isActive ? colors.accent : colors.textSecondary.withAlpha(isActive ? 255 : 120),
-                    fontSize: isActive ? 20 : 16,
-                    fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                    height: 1.6,
-                  ),
-                  textAlign: TextAlign.center,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Text(line.text),
-                  ),
-                );
+                return Obx(() {
+                  final isActive = index == _lyricsController.currentLineIndex.value;
+
+                  return SizedBox(
+                    height: 52.0,
+                    child: Center(
+                      child: GestureDetector(
+                        onTap: () => _lyricsController.seekToLine(line),
+                        behavior: HitTestBehavior.opaque,
+                        child: AnimatedDefaultTextStyle(
+                          duration: const Duration(milliseconds: 250),
+                          style: TextStyle(
+                            color: isActive ? colors.accent : colors.textSecondary.withAlpha(115),
+                            fontSize: isActive ? 20.0 : 15.0,
+                            fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+                            height: 1.2,
+                          ),
+                          textAlign: TextAlign.center,
+                          child: Container(
+                            width: double.infinity,
+                            alignment: Alignment.center,
+                            child: Text(
+                              line.text,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                });
               },
             ),
-          );
-        });
+          ),
+        );
       }
 
-      if (_playerController.plainLyrics.value.isNotEmpty) {
+      if (_lyricsController.plainLyrics.value.isNotEmpty) {
         return SizedBox(
           height: containerHeight,
           child: SingleChildScrollView(
@@ -937,7 +947,7 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             child: Center(
               child: Text(
-                _playerController.plainLyrics.value,
+                _lyricsController.plainLyrics.value,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   height: 1.8,
@@ -951,7 +961,54 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
         );
       }
 
-      return _messagePlaceholder('No lyrics found.', colors);
+      return SizedBox(
+        height: containerHeight,
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Lottie.network(
+                'https://lottie.host/81a953e5-827d-45db-99c0-62e92c63eb45/tD36e3Gz4k.json',
+                width: 140,
+                height: 140,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    width: 76,
+                    height: 76,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: colors.accent.withAlpha(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: colors.accent.withAlpha(25),
+                          blurRadius: 20,
+                          spreadRadius: 1,
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      Icons.music_off_rounded,
+                      size: 32,
+                      color: colors.accent,
+                    ),
+                  );
+                },
+              ),
+              const SizedBox(height: 18),
+              Text(
+                'No lyrics found.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: colors.textSecondary.withAlpha(180),
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0.2,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
     });
   }
 
