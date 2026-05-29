@@ -1,3 +1,276 @@
-class SaavnApi {
+import 'dart:io';
+import 'package:dio/dio.dart';
+import 'package:get/get.dart';
+import 'package:riftwave_music/core/api/exceptions/api_exceptions.dart';
+import 'package:riftwave_music/core/database/models/song_model.dart';
+import 'package:riftwave_music/features/settings/controllers/settings_controller.dart';
 
+class SaavnApi extends GetxService {
+  final Dio _dio = Dio(BaseOptions(
+    baseUrl: 'https://savan-api.vercel.app',
+    connectTimeout: const Duration(seconds: 10),
+    receiveTimeout: const Duration(seconds: 10),
+  ));
+
+  Future<List<SongModel>> searchSongs(String query) async {
+    try {
+      final response = await _dio.get('/search/songs', queryParameters: {
+        'query': query,
+      });
+
+      final data = response.data['data'];
+      List<dynamic> results = [];
+      if (data is List) {
+        results = data;
+      } else if (data is Map) {
+        results = data['results'] ?? [];
+      }
+
+      return _parseSongList(results);
+    } on DioException catch (e) {
+      _handleDioError(e);
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ParseException('JioSaavn Search Error: ${e.toString()}');
+    }
+  }
+
+  Future<String> getStreamUrl(String id) async {
+    try {
+      final response = await _dio.get('/songs', queryParameters: {
+        'id': id,
+      });
+
+      final data = response.data['data'];
+      List<dynamic> results = [];
+      if (data is List) {
+        results = data;
+      } else if (data is Map) {
+        results = data['results'] ?? [];
+      }
+
+      if (results.isEmpty) {
+        throw SongUnavailableException('JioSaavn song details not found.');
+      }
+
+      final songData = results.first;
+      final downloadUrlList = songData['downloadUrl'] as List<dynamic>?;
+
+      if (downloadUrlList == null || downloadUrlList.isEmpty) {
+        throw SongUnavailableException('No download links available for this song.');
+      }
+
+      String preferredQuality = '320kbps';
+      try {
+        final settings = Get.find<SettingsController>();
+        if (settings.initialized) {
+          preferredQuality = settings.audioQuality.value;
+        }
+      } catch (_) {}
+
+      String? streamUrl;
+      for (final dl in downloadUrlList) {
+        if (dl['quality'] == preferredQuality) {
+          streamUrl = dl['link'] as String?;
+          break;
+        }
+      }
+
+      if (streamUrl == null || streamUrl.isEmpty) {
+        streamUrl = downloadUrlList.last['link'] as String?;
+      }
+
+      if (streamUrl == null || streamUrl.isEmpty) {
+        throw SongUnavailableException('No streaming URL resolved for quality $preferredQuality');
+      }
+
+      return streamUrl;
+    } on DioException catch (e) {
+      _handleDioError(e);
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw SongUnavailableException('Failed to retrieve JioSaavn audio stream: ${e.toString()}');
+    }
+  }
+
+  Future<List<SongModel>> getCharts() async {
+    try {
+      final response = await _dio.get('/modules', queryParameters: {
+        'language': 'hindi,english',
+      });
+
+      final data = response.data['data'];
+      if (data == null) {
+        return await searchSongs('Hindi Top Hits');
+      }
+
+      final trending = data['trending'];
+      if (trending != null) {
+        final songs = trending['songs'] as List<dynamic>?;
+        if (songs != null && songs.isNotEmpty) {
+          return _parseSongList(songs);
+        }
+      }
+
+      final charts = data['charts'] as List<dynamic>?;
+      if (charts != null && charts.isNotEmpty) {
+        final firstChartId = charts.first['id'] as String?;
+        if (firstChartId != null) {
+          final playlistResponse = await _dio.get('/playlists', queryParameters: {
+            'id': firstChartId,
+          });
+          final playlistData = playlistResponse.data['data'];
+          if (playlistData != null) {
+            final playlistSongs = playlistData['songs'] as List<dynamic>?;
+            if (playlistSongs != null && playlistSongs.isNotEmpty) {
+              return _parseSongList(playlistSongs);
+            }
+          }
+        }
+      }
+
+      return await searchSongs('Hindi Top Hits');
+    } on DioException catch (e) {
+      _handleDioError(e);
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ParseException('JioSaavn Charts Error: ${e.toString()}');
+    }
+  }
+
+  Future<Map<String, dynamic>> getArtistDetails(String artistId) async {
+    try {
+      final response = await _dio.get('/artists', queryParameters: {
+        'id': artistId,
+      });
+
+      final data = response.data['data'];
+      if (data == null) {
+        throw SongUnavailableException('Artist details not found.');
+      }
+
+      final songsList = data['songs'] as List<dynamic>? ?? [];
+      final parsedSongs = _parseSongList(songsList);
+
+      String biography = '';
+      final bioData = data['bio'];
+      if (bioData is List) {
+        biography = bioData
+            .map((e) => (e is Map) ? (e['text'] as String? ?? '') : '')
+            .where((t) => t.isNotEmpty)
+            .join('\n\n');
+      } else if (bioData is String) {
+        biography = bioData;
+      }
+
+      return {
+        'id': data['id'] as String? ?? artistId,
+        'name': data['name'] as String? ?? 'Unknown Artist',
+        'imageUrl': _extractImage(data['image']),
+        'biography': biography,
+        'songs': parsedSongs,
+      };
+    } on DioException catch (e) {
+      _handleDioError(e);
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ParseException('JioSaavn Artist Error: ${e.toString()}');
+    }
+  }
+
+  Future<String?> searchArtist(String name) async {
+    try {
+      final response = await _dio.get('/search/artists', queryParameters: {
+        'query': name,
+      });
+
+      final data = response.data['data'];
+      if (data == null) return null;
+
+      final List<dynamic> results = data['results'] ?? [];
+      if (results.isEmpty) return null;
+
+      return results.first['id']?.toString();
+    } on DioException catch (e) {
+      _handleDioError(e);
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ParseException('JioSaavn Artist Search Error: ${e.toString()}');
+    }
+  }
+
+  Future<List<SongModel>> getArtistSongs(String artistId) async {
+    try {
+      final response = await _dio.get('/artists/$artistId/songs');
+
+      final data = response.data['data'];
+      if (data == null) return [];
+
+      final List<dynamic> results = data['results'] ?? [];
+      return _parseSongList(results);
+    } on DioException catch (e) {
+      _handleDioError(e);
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ParseException('JioSaavn Artist Songs Error: ${e.toString()}');
+    }
+  }
+
+  List<SongModel> _parseSongList(List<dynamic> jsonList) {
+    final List<SongModel> songs = [];
+    for (final s in jsonList) {
+      final String id = s['id'] as String? ?? '';
+      if (id.isEmpty) continue;
+
+      String albumName = '';
+      final albumData = s['album'];
+      if (albumData is Map) {
+        albumName = albumData['name'] as String? ?? '';
+      } else if (albumData is String) {
+        albumName = albumData;
+      }
+
+      int duration = 0;
+      final durVal = s['duration'];
+      if (durVal is int) {
+        duration = durVal * 1000;
+      } else if (durVal is String) {
+        duration = (int.tryParse(durVal) ?? 0) * 1000;
+      }
+
+      songs.add(SongModel(
+        id: id,
+        title: s['name'] as String? ?? '',
+        artist: s['primaryArtists'] as String? ?? s['artists'] as String? ?? 'Unknown Artist',
+        album: albumName,
+        thumbnailUrl: _extractImage(s['image']),
+        audioUrl: '',
+        durationMs: duration,
+        source: MusicSource.saavn,
+        sourceId: id,
+      ));
+    }
+    return songs;
+  }
+
+  String _extractImage(dynamic imageData) {
+    if (imageData is List && imageData.isNotEmpty) {
+      return imageData.last['link'] as String? ?? '';
+    } else if (imageData is String) {
+      return imageData;
+    }
+    return '';
+  }
+
+  Never _handleDioError(DioException e) {
+    if (e.error is SocketException ||
+        e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.receiveTimeout) {
+      throw NoInternetException();
+    }
+    if (e.response?.statusCode == 429) {
+      throw RateLimitException();
+    }
+    throw SongUnavailableException('JioSaavn service unavailable: ${e.message}');
+  }
 }

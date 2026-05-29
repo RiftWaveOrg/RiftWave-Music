@@ -10,9 +10,10 @@ import 'package:just_audio/just_audio.dart';
 import 'package:riftwave_music/core/audio/audio_handler.dart';
 import 'package:riftwave_music/core/audio/repeat_mode.dart';
 import 'package:riftwave_music/core/database/models/song_model.dart';
+import 'package:riftwave_music/core/api/youtube_api.dart';
+import 'package:riftwave_music/core/api/saavn_api.dart';
 
 class AudioPlayerController extends GetxController {
-
   late final RiftWaveAudioHandler _audioHandler;
 
   final Rx<SongModel?> currentSong = Rx<SongModel?>(null);
@@ -31,8 +32,9 @@ class AudioPlayerController extends GetxController {
   final RxBool shuffleMode = false.obs;
   final Rx<RiftWaveRepeatMode> repeatMode = RiftWaveRepeatMode.off.obs;
 
-  List<int> _shuffledIndices = [];
+  final RxString errorMessage = ''.obs;
 
+  List<int> _shuffledIndices = [];
   int _shufflePosition = 0;
 
   final List<StreamSubscription> _subscriptions = [];
@@ -57,7 +59,6 @@ class AudioPlayerController extends GetxController {
   }
 
   void _listenToStreams() {
-
     _subscriptions.add(
       _audioHandler.playerStateStream.listen((PlayerState state) {
         isPlaying.value = state.playing;
@@ -89,7 +90,6 @@ class AudioPlayerController extends GetxController {
   }
 
   Future<void> playSong(SongModel song) async {
-
     queue.assignAll([song]);
     currentQueueIndex.value = 0;
     _resetShuffleIndices();
@@ -123,7 +123,6 @@ class AudioPlayerController extends GetxController {
 
     final nextIndex = _getNextIndex();
     if (nextIndex == null) {
-
       await _audioHandler.stop();
       return;
     }
@@ -187,7 +186,6 @@ class AudioPlayerController extends GetxController {
     if (index < currentQueueIndex.value) {
       currentQueueIndex.value--;
     } else if (wasPlaying) {
-
       if (currentQueueIndex.value >= queue.length) {
         currentQueueIndex.value = 0;
       }
@@ -271,38 +269,127 @@ class AudioPlayerController extends GetxController {
   }
 
   Future<void> _loadAndPlay(SongModel song) async {
+    errorMessage.value = '';
     currentSong.value = song;
     hasSong.value = true;
 
     currentPosition.value = Duration.zero;
     totalDuration.value = Duration(milliseconds: song.durationMs);
 
-    final mediaItem = MediaItem(
-      id: song.id,
-      title: song.title,
-      artist: song.artist,
-      album: song.album,
-      duration: Duration(milliseconds: song.durationMs),
-      artUri: song.thumbnailUrl.isNotEmpty ? Uri.parse(song.thumbnailUrl) : null,
-    );
+    SongModel activeSong = song;
+    String streamUrl = '';
+    bool success = false;
 
-    if (song.audioUrl.isNotEmpty) {
-      await _audioHandler.setMediaItemAndPlay(mediaItem, song.audioUrl);
-    } else {
-      debugPrint('AudioPlayerController: Song has no audio URL — ${song.title}');
+    try {
+      debugPrint('AudioPlayerController: Trying primary source (${activeSong.source.name}) for: ${activeSong.title}');
+      if (activeSong.source == MusicSource.youtube) {
+        streamUrl = await Get.find<YouTubeApi>().getStreamUrl(activeSong.sourceId.isNotEmpty ? activeSong.sourceId : activeSong.id);
+      } else {
+        streamUrl = await Get.find<SaavnApi>().getStreamUrl(activeSong.sourceId.isNotEmpty ? activeSong.sourceId : activeSong.id);
+      }
+
+      final mediaItem = MediaItem(
+        id: activeSong.id,
+        title: activeSong.title,
+        artist: activeSong.artist,
+        album: activeSong.album,
+        duration: Duration(milliseconds: activeSong.durationMs),
+        artUri: activeSong.thumbnailUrl.isNotEmpty ? Uri.parse(activeSong.thumbnailUrl) : null,
+      );
+
+      await _audioHandler.setMediaItemAndPlay(mediaItem, streamUrl);
+      success = true;
+      debugPrint('AudioPlayerController: Primary source loaded and playing successfully!');
+    } catch (e) {
+      debugPrint('AudioPlayerController: Primary source failed: $e. Initiating fallback search...');
+    }
+
+    if (!success) {
+      try {
+        if (song.source == MusicSource.youtube) {
+
+          debugPrint('AudioPlayerController: Searching JioSaavn fallback for: ${song.title} ${song.artist}');
+          final fallbackList = await Get.find<SaavnApi>().searchSongs('${song.title} ${song.artist}');
+
+          SongModel? matchedSong;
+          for (final candidate in fallbackList) {
+            if (AudioPlayerController.isSongMatch(song, candidate)) {
+              matchedSong = candidate;
+              break;
+            }
+          }
+
+          if (matchedSong != null) {
+            activeSong = matchedSong;
+            currentSong.value = matchedSong;
+
+            streamUrl = await Get.find<SaavnApi>().getStreamUrl(matchedSong.id);
+
+            final mediaItem = MediaItem(
+              id: matchedSong.id,
+              title: matchedSong.title,
+              artist: matchedSong.artist,
+              album: matchedSong.album,
+              duration: Duration(milliseconds: matchedSong.durationMs),
+              artUri: matchedSong.thumbnailUrl.isNotEmpty ? Uri.parse(matchedSong.thumbnailUrl) : null,
+            );
+
+            await _audioHandler.setMediaItemAndPlay(mediaItem, streamUrl);
+            success = true;
+            debugPrint('AudioPlayerController: JioSaavn fallback loaded and playing successfully!');
+          } else {
+            throw Exception('No precise JioSaavn fallback matches found.');
+          }
+        } else {
+
+          debugPrint('AudioPlayerController: Searching YouTube fallback for: ${song.title} ${song.artist}');
+          final fallbackList = await Get.find<YouTubeApi>().search('${song.title} ${song.artist}');
+
+          SongModel? matchedSong;
+          for (final candidate in fallbackList) {
+            if (AudioPlayerController.isSongMatch(song, candidate)) {
+              matchedSong = candidate;
+              break;
+            }
+          }
+
+          if (matchedSong != null) {
+            activeSong = matchedSong;
+            currentSong.value = matchedSong;
+
+            streamUrl = await Get.find<YouTubeApi>().getStreamUrl(matchedSong.id);
+
+            final mediaItem = MediaItem(
+              id: matchedSong.id,
+              title: matchedSong.title,
+              artist: matchedSong.artist,
+              album: matchedSong.album,
+              duration: Duration(milliseconds: matchedSong.durationMs),
+              artUri: matchedSong.thumbnailUrl.isNotEmpty ? Uri.parse(matchedSong.thumbnailUrl) : null,
+            );
+
+            await _audioHandler.setMediaItemAndPlay(mediaItem, streamUrl);
+            success = true;
+            debugPrint('AudioPlayerController: YouTube fallback loaded and playing successfully!');
+          } else {
+            throw Exception('No precise YouTube fallback matches found.');
+          }
+        }
+      } catch (fallbackError) {
+        debugPrint('AudioPlayerController: Fallback source failed: $fallbackError');
+        errorMessage.value = 'Failed to load audio: $fallbackError';
+      }
     }
   }
 
   void _onTrackCompleted() {
     switch (repeatMode.value) {
       case RiftWaveRepeatMode.one:
-
         seekTo(Duration.zero);
         _audioHandler.play();
         break;
       case RiftWaveRepeatMode.all:
       case RiftWaveRepeatMode.off:
-
         skipToNext();
         break;
     }
@@ -314,7 +401,6 @@ class AudioPlayerController extends GetxController {
         _shufflePosition++;
         return _shuffledIndices[_shufflePosition];
       } else if (repeatMode.value == RiftWaveRepeatMode.all) {
-
         _generateShuffledIndices();
         _shufflePosition = 0;
         return _shuffledIndices[_shufflePosition];
@@ -379,6 +465,7 @@ class AudioPlayerController extends GetxController {
     bufferedPosition.value = Duration.zero;
     _shuffledIndices = [];
     _shufflePosition = 0;
+    errorMessage.value = '';
   }
 
   Future<void> _persistQueue() async {
@@ -392,8 +479,10 @@ class AudioPlayerController extends GetxController {
         'thumbnailUrl': s.thumbnailUrl,
         'audioUrl': s.audioUrl,
         'durationMs': s.durationMs,
-        'source': s.source,
+        'source': s.source.name,
         'sourceId': s.sourceId,
+        'isDownloaded': s.isDownloaded,
+        'localPath': s.localPath,
       }).toList();
 
       await box.put('queue', songsList);
@@ -420,8 +509,10 @@ class AudioPlayerController extends GetxController {
             thumbnailUrl: m['thumbnailUrl'] as String? ?? '',
             audioUrl: m['audioUrl'] as String? ?? '',
             durationMs: m['durationMs'] as int? ?? 0,
-            source: m['source'] as String? ?? 'youtube',
+            source: m['source'] == 'saavn' ? MusicSource.saavn : MusicSource.youtube,
             sourceId: m['sourceId'] as String? ?? '',
+            isDownloaded: m['isDownloaded'] as bool? ?? false,
+            localPath: m['localPath'] as String?,
           );
         }).toList();
 
@@ -431,7 +522,6 @@ class AudioPlayerController extends GetxController {
           currentQueueIndex.value = idx;
           currentSong.value = songs[idx];
           hasSong.value = true;
-
           totalDuration.value =
               Duration(milliseconds: songs[idx].durationMs);
         }
@@ -439,5 +529,65 @@ class AudioPlayerController extends GetxController {
     } catch (e) {
       debugPrint('AudioPlayerController: Failed to restore queue — $e');
     }
+  }
+
+  static bool isSongMatch(SongModel original, SongModel fallback) {
+    String clean(String str) {
+      String temp = str.toLowerCase();
+      temp = temp.replaceAll(RegExp(r'\(.*?\)'), '');
+      temp = temp.replaceAll(RegExp(r'\[.*?\]'), '');
+      temp = temp.replaceAll('official video', '');
+      temp = temp.replaceAll('official audio', '');
+      temp = temp.replaceAll('lyrics', '');
+      temp = temp.replaceAll('lyric video', '');
+      temp = temp.replaceAll('full audio', '');
+      temp = temp.replaceAll('full video', '');
+      return temp.replaceAll(RegExp(r'[^\w\s]'), '').replaceAll(RegExp(r'\s+'), ' ').trim();
+    }
+
+    final origTitle = clean(original.title);
+    final fallTitle = clean(fallback.title);
+
+    if (origTitle.isEmpty || fallTitle.isEmpty) return false;
+
+    bool titleMatch = origTitle == fallTitle ||
+        origTitle.contains(fallTitle) ||
+        fallTitle.contains(origTitle);
+
+    if (!titleMatch) {
+      final origWords = origTitle.split(' ').where((w) => w.length > 2).toList();
+      if (origWords.isNotEmpty) {
+        int matchCount = 0;
+        for (final word in origWords) {
+          if (fallTitle.contains(word)) {
+            matchCount++;
+          }
+        }
+        if (matchCount / origWords.length >= 0.7) {
+          titleMatch = true;
+        }
+      }
+    }
+
+    final origArtist = clean(original.artist);
+    final fallArtist = clean(fallback.artist);
+
+    bool artistMatch = origArtist == fallArtist ||
+        origArtist.contains(fallArtist) ||
+        fallArtist.contains(origArtist);
+
+    if (!artistMatch) {
+      final origArtistWords = origArtist.split(' ').where((w) => w.length > 2).toList();
+      if (origArtistWords.isNotEmpty) {
+        for (final word in origArtistWords) {
+          if (fallArtist.contains(word)) {
+            artistMatch = true;
+            break;
+          }
+        }
+      }
+    }
+
+    return titleMatch && artistMatch;
   }
 }
