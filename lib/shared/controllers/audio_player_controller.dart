@@ -14,6 +14,7 @@ import 'package:riftwave_music/core/api/youtube_api.dart';
 import 'package:riftwave_music/core/api/saavn_api.dart';
 import 'package:riftwave_music/core/api/lastfm_api.dart';
 import 'package:riftwave_music/features/player/controllers/dynamic_color_controller.dart';
+import 'package:riftwave_music/shared/controllers/history_controller.dart';
 
 class AudioPlayerController extends GetxController {
   late final RiftWaveAudioHandler _audioHandler;
@@ -449,6 +450,14 @@ class AudioPlayerController extends GetxController {
       } catch (fallbackError) {
         debugPrint('AudioPlayerController: Fallback source failed: $fallbackError');
         errorMessage.value = 'Failed to load audio: $fallbackError';
+      }
+
+      if (success) {
+        try {
+          Get.find<HistoryController>().addToHistory(activeSong);
+        } catch (e) {
+          debugPrint('AudioPlayerController: Failed to add to history: $e');
+        }
       }
     }
   }

@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:get/get.dart';
 import 'package:riftwave_music/core/api/exceptions/api_exceptions.dart';
 import 'package:riftwave_music/core/database/models/song_model.dart';
+import 'package:flutter/foundation.dart';
 import 'package:riftwave_music/features/settings/controllers/settings_controller.dart';
 
 class SaavnApi extends GetxService {
@@ -213,6 +214,80 @@ class SaavnApi extends GetxService {
     } catch (e) {
       if (e is ApiException) rethrow;
       throw ParseException('JioSaavn Artist Songs Error: ${e.toString()}');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getNewReleases() async {
+    try {
+      final response = await _dio.get('/modules', queryParameters: {
+        'language': 'hindi,english',
+      });
+      final data = response.data['data'];
+      if (data != null) {
+        final albums = data['albums'] as List<dynamic>?;
+        if (albums != null && albums.isNotEmpty) {
+          return albums.map((a) => {
+            'id': a['id'] as String? ?? '',
+            'name': a['name'] as String? ?? '',
+            'artist': a['primaryArtists'] as String? ?? a['artists'] as String? ?? 'Unknown Artist',
+            'thumbnailUrl': _extractImage(a['image']),
+          }).toList();
+        }
+      }
+
+      final searchResults = await searchSongs('New Releases');
+      return searchResults.map((s) => {
+        'id': s.id,
+        'name': s.album.isNotEmpty ? s.album : s.title,
+        'artist': s.artist,
+        'thumbnailUrl': s.thumbnailUrl,
+      }).toList();
+    } catch (e) {
+      debugPrint('SaavnApi: Failed to fetch new releases: $e');
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getPopularPlaylists() async {
+    try {
+      final response = await _dio.get('/modules', queryParameters: {
+        'language': 'hindi,english',
+      });
+      final data = response.data['data'];
+      if (data != null) {
+        final playlists = data['playlists'] as List<dynamic>?;
+        if (playlists != null && playlists.isNotEmpty) {
+          return playlists.map((p) => {
+            'id': p['id'] as String? ?? '',
+            'title': p['title'] as String? ?? '',
+            'subtitle': p['subtitle'] as String? ?? '',
+            'thumbnailUrl': _extractImage(p['image']),
+          }).toList();
+        }
+      }
+      return [];
+    } catch (e) {
+      debugPrint('SaavnApi: Failed to fetch popular playlists: $e');
+      return [];
+    }
+  }
+
+  Future<List<SongModel>> getPlaylistSongs(String playlistId) async {
+    try {
+      final response = await _dio.get('/playlists', queryParameters: {
+        'id': playlistId,
+      });
+      final data = response.data['data'];
+      if (data != null) {
+        final playlistSongs = data['songs'] as List<dynamic>?;
+        if (playlistSongs != null) {
+          return _parseSongList(playlistSongs);
+        }
+      }
+      return [];
+    } catch (e) {
+      debugPrint('SaavnApi: Failed to fetch playlist songs: $e');
+      return [];
     }
   }
 
