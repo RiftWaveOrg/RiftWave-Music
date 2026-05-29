@@ -8,6 +8,5 @@ class PlayerBinding extends Bindings {
   void dependencies() {
     Get.lazyPut<PlayerController>(() => PlayerController());
     Get.lazyPut<DynamicColorController>(() => DynamicColorController());
-    Get.lazyPut<VideoPlayerController>(() => VideoPlayerController());
   }
 }
