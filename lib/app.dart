@@ -5,11 +5,6 @@ import 'package:riftwave_music/core/theme/app_theme.dart';
 import 'package:riftwave_music/routes/app_pages.dart';
 import 'package:riftwave_music/features/settings/controllers/settings_controller.dart';
 
-
-
-
-
-
 class RiftWaveApp extends StatelessWidget {
   const RiftWaveApp({super.key});
 

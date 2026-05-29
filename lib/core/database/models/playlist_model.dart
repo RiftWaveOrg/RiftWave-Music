@@ -14,7 +14,7 @@ class PlaylistModel extends HiveObject {
   String description;
 
   @HiveField(3)
-  List<String> songIds; 
+  List<String> songIds;
 
   @HiveField(4)
   String thumbnailUrl;

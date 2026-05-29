@@ -12,10 +12,6 @@ import 'package:riftwave_music/features/library/views/library_screen.dart';
 import 'package:riftwave_music/features/settings/views/settings_screen.dart';
 import 'package:riftwave_music/shared/views/main_navigation.dart';
 
-
-
-
-
 class AppPages {
   AppPages._();
 

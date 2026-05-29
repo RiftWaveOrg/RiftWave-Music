@@ -1,9 +1,5 @@
 import 'package:get/get.dart';
 
-
-
-
-
 class HomeController extends GetxController {
   final RxBool isLoading = false.obs;
   final RxString greeting = ''.obs;

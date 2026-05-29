@@ -16,7 +16,7 @@ class LibraryScreen extends GetView<LibraryController> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            
+
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
               child: Row(
@@ -34,14 +34,13 @@ class LibraryScreen extends GetView<LibraryController> {
                       color: colorScheme.onSurface,
                     ),
                     onPressed: () {
-                      
+
                     },
                   ),
                 ],
               ).animate().fadeIn(duration: 500.ms),
             ),
 
-            
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Obx(() => Row(
@@ -57,7 +56,6 @@ class LibraryScreen extends GetView<LibraryController> {
 
             const SizedBox(height: 20),
 
-            
             Expanded(
               child: Center(
                 child: Column(

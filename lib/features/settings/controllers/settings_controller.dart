@@ -1,13 +1,7 @@
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-
 enum ThemeVariant { dark, amoled }
-
-
-
-
-
 
 class SettingsController extends GetxController {
   static const String _themeKey = 'theme_variant';

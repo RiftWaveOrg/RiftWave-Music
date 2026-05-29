@@ -16,7 +16,7 @@ class SearchScreen extends GetView<RiftSearchController> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            
+
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
               child: Text(
@@ -27,7 +27,6 @@ class SearchScreen extends GetView<RiftSearchController> {
               ).animate().fadeIn(duration: 500.ms),
             ),
 
-            
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Container(
@@ -68,7 +67,6 @@ class SearchScreen extends GetView<RiftSearchController> {
 
             const SizedBox(height: 24),
 
-            
             Expanded(
               child: Obx(() {
                 if (controller.isSearching.value) {

@@ -2,15 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:palette_generator/palette_generator.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
-
-
-
-
 class ColorExtractor {
-  
-  
-  
-  
+
   static Future<PaletteGenerator?> extractFromUrl(String imageUrl) async {
     try {
       final imageProvider = CachedNetworkImageProvider(imageUrl);
@@ -24,8 +17,6 @@ class ColorExtractor {
     }
   }
 
-  
-  
   static Color getDominantColor(PaletteGenerator? palette) {
     if (palette == null) return const Color(0xFF6C63FF);
     return palette.dominantColor?.color ??
@@ -33,7 +24,6 @@ class ColorExtractor {
         const Color(0xFF6C63FF);
   }
 
-  
   static Color getAccentColor(PaletteGenerator? palette) {
     if (palette == null) return const Color(0xFF9D97FF);
     return palette.lightVibrantColor?.color ??

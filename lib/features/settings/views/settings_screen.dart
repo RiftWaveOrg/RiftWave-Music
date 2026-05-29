@@ -26,7 +26,6 @@ class SettingsScreen extends GetView<SettingsController> {
 
             const SizedBox(height: 28),
 
-            
             _buildSectionTitle(theme, 'Appearance'),
             const SizedBox(height: 12),
             Obx(() => _buildSettingsTile(
@@ -39,7 +38,6 @@ class SettingsScreen extends GetView<SettingsController> {
 
             const SizedBox(height: 24),
 
-            
             _buildSectionTitle(theme, 'Playback'),
             const SizedBox(height: 12),
             _buildSettingsTile(
@@ -60,7 +58,6 @@ class SettingsScreen extends GetView<SettingsController> {
 
             const SizedBox(height: 24),
 
-            
             _buildSectionTitle(theme, 'About'),
             const SizedBox(height: 12),
             _buildSettingsTile(
@@ -87,7 +84,7 @@ class SettingsScreen extends GetView<SettingsController> {
               onTap: () {},
             ).animate().fadeIn(duration: 400.ms, delay: 400.ms),
 
-            const SizedBox(height: 100), 
+            const SizedBox(height: 100),
           ],
         ),
       ),

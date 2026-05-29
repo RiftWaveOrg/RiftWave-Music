@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 
-
-
-
-
 class LoadingShimmer extends StatelessWidget {
   final double width;
   final double height;
@@ -35,7 +31,6 @@ class LoadingShimmer extends StatelessWidget {
     );
   }
 
-  
   static Widget songList({int count = 5}) {
     return Column(
       children: List.generate(count, (index) {
