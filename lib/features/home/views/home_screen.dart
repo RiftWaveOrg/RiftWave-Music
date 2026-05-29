@@ -15,7 +15,7 @@ class HomeScreen extends GetView<HomeController> {
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
-            
+
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
@@ -49,7 +49,6 @@ class HomeScreen extends GetView<HomeController> {
               ),
             ),
 
-            
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.all(20),
@@ -68,7 +67,7 @@ class HomeScreen extends GetView<HomeController> {
                     _buildSectionHeader(theme, 'Made for You'),
                     const SizedBox(height: 12),
                     _buildPlaceholderHorizontalList(colorScheme),
-                    const SizedBox(height: 100), 
+                    const SizedBox(height: 100),
                   ],
                 ),
               ),

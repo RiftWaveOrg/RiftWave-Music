@@ -5,13 +5,13 @@ part 'history_model.g.dart';
 @HiveType(typeId: 2)
 class HistoryModel extends HiveObject {
   @HiveField(0)
-  final String songId; 
+  final String songId;
 
   @HiveField(1)
   final DateTime playedAt;
 
   @HiveField(2)
-  final int playDurationMs; 
+  final int playDurationMs;
 
   HistoryModel({
     required this.songId,

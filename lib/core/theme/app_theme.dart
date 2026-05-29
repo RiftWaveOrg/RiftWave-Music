@@ -2,15 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'color_schemes.dart';
 
-
-
-
-
-
 class AppTheme {
   AppTheme._();
 
-  
   static ThemeData dark({ColorScheme? dynamicColorScheme}) {
     final colorScheme = dynamicColorScheme != null
         ? AppColorSchemes.dynamicDark(dynamicColorScheme)
@@ -18,7 +12,6 @@ class AppTheme {
     return _buildTheme(colorScheme);
   }
 
-  
   static ThemeData amoled({ColorScheme? dynamicColorScheme}) {
     final colorScheme = dynamicColorScheme != null
         ? AppColorSchemes.dynamicAmoled(dynamicColorScheme)

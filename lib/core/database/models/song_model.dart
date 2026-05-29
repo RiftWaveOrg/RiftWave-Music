@@ -26,10 +26,10 @@ class SongModel extends HiveObject {
   final int durationMs;
 
   @HiveField(7)
-  final String source; 
+  final String source;
 
   @HiveField(8)
-  final String sourceId; 
+  final String sourceId;
 
   SongModel({
     required this.id,

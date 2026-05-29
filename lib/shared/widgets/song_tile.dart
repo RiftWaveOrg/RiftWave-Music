@@ -1,9 +1,5 @@
 import 'package:flutter/material.dart';
 
-
-
-
-
 class SongTile extends StatelessWidget {
   final String title;
   final String artist;
@@ -35,7 +31,7 @@ class SongTile extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
           child: Row(
             children: [
-              
+
               Container(
                 width: 50,
                 height: 50,
@@ -56,7 +52,6 @@ class SongTile extends StatelessWidget {
               ),
               const SizedBox(width: 14),
 
-              
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -87,7 +82,6 @@ class SongTile extends StatelessWidget {
                 ),
               ),
 
-              
               trailing ??
                   IconButton(
                     icon: Icon(

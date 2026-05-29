@@ -1,20 +1,10 @@
 import 'package:flutter/material.dart';
 
-
-
-
-
-
-
-
-
 class AppColorSchemes {
   AppColorSchemes._();
 
-  
   static const Color brandColor = Color(0xFF6C63FF);
 
-  
   static ColorScheme get dark {
     final base = ColorScheme.fromSeed(
       seedColor: brandColor,
@@ -27,7 +17,6 @@ class AppColorSchemes {
     );
   }
 
-  
   static ColorScheme get amoled {
     final base = ColorScheme.fromSeed(
       seedColor: brandColor,
@@ -40,8 +29,6 @@ class AppColorSchemes {
     );
   }
 
-  
-  
   static ColorScheme dynamicDark(ColorScheme systemDark) {
     return systemDark.copyWith(
       surface: const Color(0xFF121212),
@@ -50,7 +37,6 @@ class AppColorSchemes {
     );
   }
 
-  
   static ColorScheme dynamicAmoled(ColorScheme systemDark) {
     return systemDark.copyWith(
       surface: Colors.black,

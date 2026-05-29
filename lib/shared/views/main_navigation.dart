@@ -7,11 +7,6 @@ import 'package:riftwave_music/features/library/views/library_screen.dart';
 import 'package:riftwave_music/features/settings/views/settings_screen.dart';
 import 'package:riftwave_music/shared/widgets/mini_player.dart';
 
-
-
-
-
-
 class MainNavigation extends StatelessWidget {
   const MainNavigation({super.key});
 
@@ -33,10 +28,9 @@ class MainNavigation extends StatelessWidget {
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          
+
           const MiniPlayer(),
 
-          
           Obx(() => NavigationBar(
             selectedIndex: navController.currentIndex.value,
             onDestinationSelected: navController.changeTab,
@@ -92,7 +86,6 @@ class MainNavigation extends StatelessWidget {
     );
   }
 }
-
 
 class _MainNavController extends GetxController {
   final RxInt currentIndex = 0.obs;

@@ -1,9 +1,5 @@
 import 'package:get/get.dart';
 
-
-
-
-
 class RiftSearchController extends GetxController {
   final RxString query = ''.obs;
   final RxBool isSearching = false.obs;
@@ -17,7 +13,7 @@ class RiftSearchController extends GetxController {
       return;
     }
     isSearching.value = true;
-    
+
   }
 
   void clearSearch() {

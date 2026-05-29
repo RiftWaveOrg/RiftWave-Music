@@ -1,18 +1,20 @@
+import 'package:audio_service/audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+
 import 'package:riftwave_music/app.dart';
-import 'package:riftwave_music/shared/controllers/audio_player_controller.dart';
-import 'package:riftwave_music/features/settings/controllers/settings_controller.dart';
+import 'package:riftwave_music/core/audio/audio_handler.dart';
 import 'package:riftwave_music/core/database/models/song_model.dart';
 import 'package:riftwave_music/core/database/models/playlist_model.dart';
 import 'package:riftwave_music/core/database/models/history_model.dart';
+import 'package:riftwave_music/features/settings/controllers/settings_controller.dart';
+import 'package:riftwave_music/shared/controllers/audio_player_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
     statusBarIconBrightness: Brightness.light,
@@ -20,15 +22,27 @@ void main() async {
     systemNavigationBarIconBrightness: Brightness.light,
   ));
 
-  
   await Hive.initFlutter();
-
-  
   Hive.registerAdapter(SongModelAdapter());
   Hive.registerAdapter(PlaylistModelAdapter());
   Hive.registerAdapter(HistoryModelAdapter());
 
-  
+  final audioHandler = await AudioService.init(
+    builder: () => RiftWaveAudioHandler(),
+    config: const AudioServiceConfig(
+      androidNotificationChannelId: 'com.riftwavemusic.app.channel.audio',
+      androidNotificationChannelName: 'RiftWave Music',
+      androidNotificationOngoing: true,
+      androidStopForegroundOnPause: true,
+      androidNotificationIcon: 'mipmap/ic_launcher',
+
+      androidNotificationClickStartsActivity: true,
+      fastForwardInterval: Duration(seconds: 10),
+      rewindInterval: Duration(seconds: 10),
+    ),
+  );
+
+  Get.put<RiftWaveAudioHandler>(audioHandler, permanent: true);
   Get.put(SettingsController(), permanent: true);
   Get.put(AudioPlayerController(), permanent: true);
 
