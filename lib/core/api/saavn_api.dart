@@ -183,6 +183,69 @@ class SaavnApi extends GetxService {
     }
   }
 
+
+  Future<List<Map<String, dynamic>>> searchAllArtists(String query) async {
+    try {
+      final response = await _dio.get('/search/artists', queryParameters: {'query': query});
+      final data = response.data['data'];
+      final List<dynamic> results = (data != null && data is Map) ? (data['results'] ?? []) : [];
+      return results.map((e) => {
+        'id': e['id']?.toString() ?? '',
+        'name': e['name']?.toString() ?? '',
+        'imageUrl': _getHighestResImage(e['image']) ?? '',
+        'type': 'artist',
+      }).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> searchAlbums(String query) async {
+    try {
+      final response = await _dio.get('/search/albums', queryParameters: {'query': query});
+      final data = response.data['data'];
+      final List<dynamic> results = (data != null && data is Map) ? (data['results'] ?? []) : [];
+      return results.map((e) => {
+        'id': e['id']?.toString() ?? '',
+        'name': e['name']?.toString() ?? e['title']?.toString() ?? '',
+        'subtitle': e['description']?.toString() ?? e['subtitle']?.toString() ?? '',
+        'imageUrl': _getHighestResImage(e['image']) ?? '',
+        'type': 'album',
+      }).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> searchPlaylists(String query) async {
+    try {
+      final response = await _dio.get('/search/playlists', queryParameters: {'query': query});
+      final data = response.data['data'];
+      final List<dynamic> results = (data != null && data is Map) ? (data['results'] ?? []) : [];
+      return results.map((e) => {
+        'id': e['id']?.toString() ?? '',
+        'title': e['title']?.toString() ?? e['name']?.toString() ?? '',
+        'subtitle': e['subtitle']?.toString() ?? e['description']?.toString() ?? '',
+        'imageUrl': _getHighestResImage(e['image']) ?? '',
+        'type': 'playlist',
+      }).toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
+  String? _getHighestResImage(dynamic imageList) {
+    if (imageList is List && imageList.isNotEmpty) {
+      if (imageList.last is Map && imageList.last['url'] != null) {
+        return imageList.last['url'].toString();
+      } else if (imageList.last is String) {
+        return imageList.last.toString();
+      }
+    }
+    if (imageList is String) return imageList;
+    return null;
+  }
+
   Future<String?> searchArtist(String name) async {
     try {
       final response = await _dio.get('/search/artists', queryParameters: {
