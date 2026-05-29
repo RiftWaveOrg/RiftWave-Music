@@ -1,6 +1,8 @@
 import 'dart:ui';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:riftwave_music/core/models/region.dart';
 
 enum ThemeVariant { dark, amoled }
@@ -98,6 +100,36 @@ class SettingsController extends GetxController {
     hasSeenDataWarning.value = true;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_dataWarningKey, true);
+  }
+
+  Future<void> requestBackgroundActivity() async {
+    try {
+      final status = await Permission.ignoreBatteryOptimizations.status;
+      if (!status.isGranted) {
+        final result = await Permission.ignoreBatteryOptimizations.request();
+        if (result.isDenied || result.isPermanentlyDenied) {
+          await openAppSettings();
+        }
+      } else {
+        Get.snackbar(
+          'Background Activity',
+          'RiftWave is already allowed to run in the background without restrictions!',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xFF1A1A2E),
+          colorText: const Color(0xFFFFFFFF),
+          margin: const EdgeInsets.all(16),
+          borderRadius: 12,
+        );
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Could not open battery settings.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: const Color(0xFF1A1A2E),
+        colorText: const Color(0xFFFFFFFF),
+      );
+    }
   }
 
   bool get isAmoled => themeVariant.value == ThemeVariant.amoled;
