@@ -80,6 +80,78 @@ class HomeScreen extends GetView<HomeController> {
                 );
               }),
               Obx(() {
+                if (controller.isLoading.value && controller.dailyMix.isEmpty) {
+                  return SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildSectionHeader(theme, 'Your Daily Mix'),
+                          const SizedBox(height: 12),
+                          _buildShimmerHorizontalList(colorScheme),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+                if (controller.dailyMix.isEmpty) {
+                  return const SliverToBoxAdapter(child: SizedBox.shrink());
+                }
+                return SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: _buildSectionHeader(theme, 'Your Daily Mix'),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildDailyMixList(context, colorScheme, theme),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+              Obx(() {
+                if (controller.isLoading.value && controller.regionalCharts.isEmpty) {
+                  return SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildSectionHeader(theme, 'Trending in Region'),
+                          const SizedBox(height: 12),
+                          _buildShimmerHorizontalList(colorScheme),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+                if (controller.regionalCharts.isEmpty) {
+                  return const SliverToBoxAdapter(child: SizedBox.shrink());
+                }
+                return SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: _buildSectionHeader(theme, 'Trending in Region'),
+                        ),
+                        const SizedBox(height: 12),
+                        _buildRegionalChartsList(context, colorScheme, theme),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+              Obx(() {
                 if (controller.isLoading.value && controller.trendingSongs.isEmpty) {
                   return SliverToBoxAdapter(
                     child: Padding(
@@ -263,14 +335,14 @@ class HomeScreen extends GetView<HomeController> {
                 );
               }),
               Obx(() {
-                if (controller.isLoading.value && controller.recommendedArtists.isEmpty) {
+                if (controller.isLoading.value && controller.regionalArtists.isEmpty) {
                   return SliverToBoxAdapter(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildSectionHeader(theme, 'Recommended Artists'),
+                          _buildSectionHeader(theme, 'Regional Artists'),
                           const SizedBox(height: 12),
                           _buildShimmerArtistList(colorScheme),
                         ],
@@ -278,7 +350,7 @@ class HomeScreen extends GetView<HomeController> {
                     ),
                   );
                 }
-                if (controller.recommendedArtists.isEmpty) {
+                if (controller.regionalArtists.isEmpty) {
                   return const SliverToBoxAdapter(child: SizedBox.shrink());
                 }
                 return SliverToBoxAdapter(
@@ -289,10 +361,10 @@ class HomeScreen extends GetView<HomeController> {
                       children: [
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: _buildSectionHeader(theme, 'Recommended Artists'),
+                          child: _buildSectionHeader(theme, 'Regional Artists'),
                         ),
                         const SizedBox(height: 12),
-                        _buildRecommendedArtistsList(context, colorScheme, theme),
+                        _buildRegionalArtistsList(context, colorScheme, theme),
                       ],
                     ),
                   ),
@@ -466,6 +538,204 @@ class HomeScreen extends GetView<HomeController> {
           delay: (index * 80).ms,
         );
       },
+    );
+  }
+
+  Widget _buildDailyMixList(BuildContext context, ColorScheme colorScheme, ThemeData theme) {
+    final playerController = Get.find<AudioPlayerController>();
+    return SizedBox(
+      height: 220,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        itemCount: controller.dailyMix.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 14),
+        itemBuilder: (context, index) {
+          final song = controller.dailyMix[index];
+          return GestureDetector(
+            onTap: () {
+              playerController.playAll(controller.dailyMix, startIndex: index);
+            },
+            child: SizedBox(
+              width: 140,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: song.thumbnailUrl.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: song.thumbnailUrl,
+                            width: 140,
+                            height: 140,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => Container(
+                              color: colorScheme.surfaceContainerHighest,
+                              child: Center(
+                                child: Icon(
+                                  Icons.music_note_rounded,
+                                  color: colorScheme.primary.withAlpha(120),
+                                  size: 40,
+                                ),
+                              ),
+                            ),
+                            errorWidget: (context, url, error) => Container(
+                              color: colorScheme.surfaceContainerHighest,
+                              child: Center(
+                                child: Icon(
+                                  Icons.music_note_rounded,
+                                  color: colorScheme.primary.withAlpha(120),
+                                  size: 40,
+                                ),
+                              ),
+                            ),
+                          )
+                        : Container(
+                            width: 140,
+                            height: 140,
+                            color: colorScheme.surfaceContainerHighest,
+                            child: Center(
+                              child: Icon(
+                                Icons.music_note_rounded,
+                                color: colorScheme.primary.withAlpha(120),
+                                size: 40,
+                              ),
+                            ),
+                          ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    song.title,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    song.artist,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurface.withAlpha(150),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ).animate().fadeIn(
+            duration: 400.ms,
+            delay: (index * 80).ms,
+          ).slideX(
+            begin: 0.1,
+            end: 0,
+            duration: 400.ms,
+            delay: (index * 80).ms,
+            curve: Curves.easeOut,
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildRegionalChartsList(BuildContext context, ColorScheme colorScheme, ThemeData theme) {
+    final playerController = Get.find<AudioPlayerController>();
+    return SizedBox(
+      height: 220,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        itemCount: controller.regionalCharts.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 14),
+        itemBuilder: (context, index) {
+          final song = controller.regionalCharts[index];
+          return GestureDetector(
+            onTap: () {
+              playerController.playAll(controller.regionalCharts, startIndex: index);
+            },
+            child: SizedBox(
+              width: 140,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: song.thumbnailUrl.isNotEmpty
+                        ? CachedNetworkImage(
+                            imageUrl: song.thumbnailUrl,
+                            width: 140,
+                            height: 140,
+                            fit: BoxFit.cover,
+                            placeholder: (context, url) => Container(
+                              color: colorScheme.surfaceContainerHighest,
+                              child: Center(
+                                child: Icon(
+                                  Icons.music_note_rounded,
+                                  color: colorScheme.primary.withAlpha(120),
+                                  size: 40,
+                                ),
+                              ),
+                            ),
+                            errorWidget: (context, url, error) => Container(
+                              color: colorScheme.surfaceContainerHighest,
+                              child: Center(
+                                child: Icon(
+                                  Icons.music_note_rounded,
+                                  color: colorScheme.primary.withAlpha(120),
+                                  size: 40,
+                                ),
+                              ),
+                            ),
+                          )
+                        : Container(
+                            width: 140,
+                            height: 140,
+                            color: colorScheme.surfaceContainerHighest,
+                            child: Center(
+                              child: Icon(
+                                Icons.music_note_rounded,
+                                color: colorScheme.primary.withAlpha(120),
+                                size: 40,
+                              ),
+                            ),
+                          ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    song.title,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: colorScheme.onSurface,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    song.artist,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurface.withAlpha(150),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ).animate().fadeIn(
+            duration: 400.ms,
+            delay: (index * 80).ms,
+          ).slideX(
+            begin: 0.1,
+            end: 0,
+            duration: 400.ms,
+            delay: (index * 80).ms,
+            curve: Curves.easeOut,
+          );
+        },
+      ),
     );
   }
 
@@ -980,16 +1250,16 @@ class HomeScreen extends GetView<HomeController> {
     );
   }
 
-  Widget _buildRecommendedArtistsList(BuildContext context, ColorScheme colorScheme, ThemeData theme) {
+  Widget _buildRegionalArtistsList(BuildContext context, ColorScheme colorScheme, ThemeData theme) {
     return SizedBox(
       height: 130,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: controller.recommendedArtists.length,
+        itemCount: controller.regionalArtists.length,
         separatorBuilder: (_, __) => const SizedBox(width: 18),
         itemBuilder: (context, index) {
-          final artist = controller.recommendedArtists[index];
+          final artist = controller.regionalArtists[index];
           return GestureDetector(
             onTap: () {
               Get.to(() => ContentDetailScreen(

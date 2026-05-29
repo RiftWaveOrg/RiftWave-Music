@@ -4,6 +4,8 @@ import 'package:hive/hive.dart';
 import 'package:riftwave_music/core/database/models/song_model.dart';
 import 'package:riftwave_music/core/api/saavn_api.dart';
 import 'package:riftwave_music/core/api/youtube_api.dart';
+import 'package:riftwave_music/core/services/recommendation_engine.dart';
+import 'package:riftwave_music/features/settings/controllers/settings_controller.dart';
 import 'package:riftwave_music/shared/controllers/history_controller.dart';
 
 class HomeController extends GetxController {
@@ -13,9 +15,13 @@ class HomeController extends GetxController {
   final RxList<Map<String, dynamic>> popularPlaylists = <Map<String, dynamic>>[].obs;
   final RxList<Map<String, dynamic>> youtubePlaylists = <Map<String, dynamic>>[].obs;
   final RxList<SongModel> youtubeTrending = <SongModel>[].obs;
-  final RxList<Map<String, dynamic>> recommendedArtists = <Map<String, dynamic>>[].obs;
+
+  final RxList<SongModel> dailyMix = <SongModel>[].obs;
+  final RxList<SongModel> regionalCharts = <SongModel>[].obs;
+  final RxList<Map<String, dynamic>> regionalArtists = <Map<String, dynamic>>[].obs;
 
   final RxBool isLoading = false.obs;
+  final RxBool isDiscoveryLoading = false.obs;
   final RxString errorMessage = ''.obs;
   final RxString greeting = ''.obs;
 
@@ -27,6 +33,11 @@ class HomeController extends GetxController {
     super.onInit();
     _updateGreeting();
     _initAndLoadCache();
+
+    ever<String>(
+      Get.find<SettingsController>().regionCode,
+      (_) => _refreshDiscoverySections(),
+    );
   }
 
   void _updateGreeting() {
@@ -73,11 +84,6 @@ class HomeController extends GetxController {
         youtubeTrending.assignAll(cachedYtTrending.cast<SongModel>());
       }
 
-      final cachedArtists = _cacheBox.get('recommended_artists');
-      if (cachedArtists is List) {
-        recommendedArtists.assignAll(cachedArtists.map((e) => Map<String, dynamic>.from(e)).toList());
-      }
-
       _loadLocalHistory();
 
       if (trendingSongs.isEmpty && newReleases.isEmpty && popularPlaylists.isEmpty && youtubePlaylists.isEmpty) {
@@ -109,31 +115,28 @@ class HomeController extends GetxController {
     try {
       final saavn = Get.find<SaavnApi>();
       final ytApi = Get.find<YouTubeApi>();
+      final region = Get.find<SettingsController>().currentRegion;
 
       final results = await Future.wait([
         saavn.getCharts().catchError((e) {
           debugPrint('HomeController: Failed to fetch charts: $e');
           return <SongModel>[];
         }),
-        saavn.getNewReleases().catchError((e) {
+        saavn.getNewReleases(language: region.saavnLanguage).catchError((e) {
           debugPrint('HomeController: Failed to fetch new releases: $e');
           return <Map<String, dynamic>>[];
         }),
-        saavn.getPopularPlaylists().catchError((e) {
+        saavn.getPopularPlaylists(language: region.saavnLanguage).catchError((e) {
           debugPrint('HomeController: Failed to fetch popular playlists: $e');
           return <Map<String, dynamic>>[];
         }),
-        ytApi.getPopularPlaylists('popular music playlist').catchError((e) {
+        ytApi.getPopularPlaylists('${region.youtubeQuery} playlist').catchError((e) {
           debugPrint('HomeController: Failed to fetch YouTube playlists: $e');
           return <Map<String, dynamic>>[];
         }),
-        ytApi.getTrending().catchError((e) {
+        ytApi.getTrending(region.youtubeQuery).catchError((e) {
           debugPrint('HomeController: Failed to fetch YouTube trending: $e');
           return <SongModel>[];
-        }),
-        _fetchRecommendedArtists().catchError((e) {
-          debugPrint('HomeController: Failed to fetch recommended artists: $e');
-          return <Map<String, dynamic>>[];
         }),
       ]);
 
@@ -142,7 +145,6 @@ class HomeController extends GetxController {
       final freshPlaylists = results[2] as List<Map<String, dynamic>>;
       final freshYtPlaylists = results[3] as List<Map<String, dynamic>>;
       final freshYtTrending = results[4] as List<SongModel>;
-      final freshArtists = results[5] as List<Map<String, dynamic>>;
 
       if (freshTrending.isNotEmpty) {
         trendingSongs.assignAll(freshTrending);
@@ -168,11 +170,6 @@ class HomeController extends GetxController {
         youtubeTrending.assignAll(freshYtTrending);
         await _cacheBox.put('youtube_trending', freshYtTrending);
       }
-
-      if (freshArtists.isNotEmpty) {
-        recommendedArtists.assignAll(freshArtists);
-        await _cacheBox.put('recommended_artists', freshArtists);
-      }
     } catch (e) {
       debugPrint('HomeController: Parallel refresh failed: $e');
       if (trendingSongs.isEmpty && newReleases.isEmpty) {
@@ -180,6 +177,46 @@ class HomeController extends GetxController {
       }
     } finally {
       isLoading.value = false;
+    }
+
+    _refreshDiscoverySections();
+  }
+
+  Future<void> _refreshDiscoverySections() async {
+    isDiscoveryLoading.value = true;
+    try {
+      final engine = Get.find<RecommendationEngine>();
+      final settings = Get.find<SettingsController>();
+      final region = settings.currentRegion;
+      _loadLocalHistory();
+      final history = List<SongModel>.from(recentlyPlayed);
+
+      final results = await Future.wait([
+        engine.getDailyMix(region: region, history: history).catchError((e) {
+          debugPrint('HomeController: Daily mix failed: $e');
+          return <SongModel>[];
+        }),
+        engine.getRegionalCharts(region).catchError((e) {
+          debugPrint('HomeController: Regional charts failed: $e');
+          return <SongModel>[];
+        }),
+        engine.getRegionalArtists(region).catchError((e) {
+          debugPrint('HomeController: Regional artists failed: $e');
+          return <Map<String, dynamic>>[];
+        }),
+      ]);
+
+      final freshDailyMix = results[0] as List<SongModel>;
+      final freshRegionalCharts = results[1] as List<SongModel>;
+      final freshRegionalArtists = results[2] as List<Map<String, dynamic>>;
+
+      if (freshDailyMix.isNotEmpty) dailyMix.assignAll(freshDailyMix);
+      if (freshRegionalCharts.isNotEmpty) regionalCharts.assignAll(freshRegionalCharts);
+      if (freshRegionalArtists.isNotEmpty) regionalArtists.assignAll(freshRegionalArtists);
+    } catch (e) {
+      debugPrint('HomeController: Discovery refresh failed: $e');
+    } finally {
+      isDiscoveryLoading.value = false;
     }
   }
 

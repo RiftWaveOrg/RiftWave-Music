@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:riftwave_music/features/settings/controllers/settings_controller.dart';
+import 'package:riftwave_music/core/models/region.dart';
 
 class SettingsScreen extends GetView<SettingsController> {
   const SettingsScreen({super.key});
@@ -35,6 +36,21 @@ class SettingsScreen extends GetView<SettingsController> {
               subtitle: controller.isAmoled ? 'AMOLED Black' : 'Dark',
               onTap: () => _showThemeDialog(context),
             )).animate().fadeIn(duration: 400.ms, delay: 100.ms),
+
+            const SizedBox(height: 24),
+
+            _buildSectionTitle(theme, 'Music Discovery'),
+            const SizedBox(height: 12),
+            Obx(() {
+              final region = controller.currentRegion;
+              return _buildSettingsTile(
+                colorScheme: colorScheme,
+                icon: Icons.public_rounded,
+                title: 'Music Region',
+                subtitle: region.name,
+                onTap: () => _showRegionPicker(context),
+              );
+            }).animate().fadeIn(duration: 400.ms, delay: 150.ms),
 
             const SizedBox(height: 24),
 
@@ -170,6 +186,143 @@ class SettingsScreen extends GetView<SettingsController> {
                 color: colorScheme.onSurface.withAlpha(60),
                 size: 20,
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showRegionPicker(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final searchController = TextEditingController();
+    final filteredRegions = MusicRegion.all.obs;
+
+    searchController.addListener(() {
+      final query = searchController.text.toLowerCase();
+      if (query.isEmpty) {
+        filteredRegions.assignAll(MusicRegion.all);
+      } else {
+        filteredRegions.assignAll(
+          MusicRegion.all.where((r) => r.name.toLowerCase().contains(query)),
+        );
+      }
+    });
+
+    Get.dialog(
+      Dialog(
+        backgroundColor: colorScheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: SizedBox(
+          width: MediaQuery.of(context).size.width * 0.9,
+          height: MediaQuery.of(context).size.height * 0.7,
+          child: Column(
+            children: [
+              const SizedBox(height: 20),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  children: [
+                    Icon(Icons.public_rounded, color: colorScheme.primary, size: 22),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Choose Your Region',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 4),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Text(
+                  'Songs, artists & playlists will be tailored to your region',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: colorScheme.onSurface.withAlpha(120),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: TextField(
+                  controller: searchController,
+                  autofocus: false,
+                  style: TextStyle(color: colorScheme.onSurface),
+                  decoration: InputDecoration(
+                    hintText: 'Search region...',
+                    hintStyle: TextStyle(color: colorScheme.onSurface.withAlpha(90)),
+                    prefixIcon: Icon(Icons.search_rounded, color: colorScheme.primary, size: 20),
+                    filled: true,
+                    fillColor: colorScheme.surfaceContainerHighest,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Expanded(
+                child: Obx(() => ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  itemCount: filteredRegions.length,
+                  itemBuilder: (context, index) {
+                    final region = filteredRegions[index];
+                    return Obx(() {
+                      final isSelected = controller.regionCode.value == region.code;
+                      return Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(12),
+                          onTap: () {
+                            controller.setRegion(region.code);
+                            Get.back();
+                          },
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            margin: const EdgeInsets.symmetric(vertical: 2),
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? colorScheme.primary.withAlpha(30)
+                                  : Colors.transparent,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    region.name,
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                                      color: isSelected ? colorScheme.primary : colorScheme.onSurface,
+                                    ),
+                                  ),
+                                ),
+                                if (isSelected)
+                                  Icon(
+                                    Icons.check_circle_rounded,
+                                    color: colorScheme.primary,
+                                    size: 20,
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    });
+                  },
+                )),
+              ),
+              const SizedBox(height: 8),
             ],
           ),
         ),

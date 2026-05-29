@@ -13,7 +13,7 @@ class LastFmApi extends GetxService {
     receiveTimeout: const Duration(seconds: 10),
   ));
 
-  String _apiKey = 'b6096b3e21b6fe47b25cfe964c00502b';
+  String _apiKey = '';
 
   @override
   void onInit() {
