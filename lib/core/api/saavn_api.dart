@@ -95,14 +95,18 @@ class SaavnApi extends GetxService {
   }
 
   Future<List<SongModel>> getCharts() async {
+    return getChartsByLanguage('hindi,english');
+  }
+
+  Future<List<SongModel>> getChartsByLanguage(String language) async {
     try {
       final response = await _dio.get('/modules', queryParameters: {
-        'language': 'hindi,english',
+        'language': language,
       });
 
       final data = response.data['data'];
       if (data == null) {
-        return await searchSongs('Hindi Top Hits');
+        return await searchSongs('$language top hits');
       }
 
       final trending = data['trending'];
@@ -130,7 +134,7 @@ class SaavnApi extends GetxService {
         }
       }
 
-      return await searchSongs('Hindi Top Hits');
+      return await searchSongs('$language top hits');
     } on DioException catch (e) {
       _handleDioError(e);
     } catch (e) {
@@ -217,10 +221,10 @@ class SaavnApi extends GetxService {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getNewReleases() async {
+  Future<List<Map<String, dynamic>>> getNewReleases({String language = 'hindi,english'}) async {
     try {
       final response = await _dio.get('/modules', queryParameters: {
-        'language': 'hindi,english',
+        'language': language,
       });
       final data = response.data['data'];
       if (data != null) {
@@ -248,10 +252,10 @@ class SaavnApi extends GetxService {
     }
   }
 
-  Future<List<Map<String, dynamic>>> getPopularPlaylists() async {
+  Future<List<Map<String, dynamic>>> getPopularPlaylists({String language = 'hindi,english'}) async {
     try {
       final response = await _dio.get('/modules', queryParameters: {
-        'language': 'hindi,english',
+        'language': language,
       });
       final data = response.data['data'];
       if (data != null) {

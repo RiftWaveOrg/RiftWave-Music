@@ -15,6 +15,7 @@ import 'package:riftwave_music/core/api/saavn_api.dart';
 import 'package:riftwave_music/core/api/lastfm_api.dart';
 import 'package:riftwave_music/features/player/controllers/dynamic_color_controller.dart';
 import 'package:riftwave_music/shared/controllers/history_controller.dart';
+import 'package:riftwave_music/core/services/recommendation_engine.dart';
 
 class AudioPlayerController extends GetxController {
   late final RiftWaveAudioHandler _audioHandler;
@@ -49,6 +50,9 @@ class AudioPlayerController extends GetxController {
 
   static const String _queueBoxName = 'queue_box';
 
+  final RxList<SongModel> upNextSuggestions = <SongModel>[].obs;
+  String _lastSuggestionSongId = '';
+
   @override
   void onInit() {
     super.onInit();
@@ -63,6 +67,10 @@ class AudioPlayerController extends GetxController {
         if (Get.isRegistered<DynamicColorController>()) {
           Get.find<DynamicColorController>().extractFromImageUrl(song.thumbnailUrl);
         }
+      }
+      if (song != null && song.id != _lastSuggestionSongId) {
+        _lastSuggestionSongId = song.id;
+        _refreshUpNextSuggestions(song);
       }
     });
   }
@@ -706,6 +714,61 @@ class AudioPlayerController extends GetxController {
     return titleMatch && artistMatch;
   }
 
+  Future<void> _refreshUpNextSuggestions(SongModel song) async {
+    try {
+      if (!Get.isRegistered<RecommendationEngine>()) return;
+      final engine = Get.find<RecommendationEngine>();
+      final suggestions = await engine.getSimilarToNowPlaying(song);
+      final existingIds = queue.map((s) => s.id).toSet();
+            final filtered = suggestions.where((s) => !existingIds.contains(s.id)).toList();
+      upNextSuggestions.assignAll(filtered);
+      _resolveThumbnailsAsync(filtered).then((resolved) {
+        for (final r in resolved) {
+          final idx = upNextSuggestions.indexWhere((q) => q.id == r.id);
+          if (idx != -1) upNextSuggestions[idx] = r;
+        }
+      });
+      debugPrint('AudioPlayerController: Up next suggestions refreshed — ${filtered.length} tracks');
+    } catch (e) {
+      debugPrint('AudioPlayerController: Failed to refresh up next suggestions: $e');
+    }
+  }
+
+
+  bool _isVariation(String originalClean, String candidateTitle, String candidateArtist) {
+    final candClean = _getCleanedTitle(candidateTitle, candidateArtist).toLowerCase();
+    final origClean = originalClean.toLowerCase();
+    
+    if (origClean.isEmpty || candClean.isEmpty) return false;
+    if (candClean.contains(origClean) || origClean.contains(candClean)) return true;
+    
+    final origWords = origClean.split(' ').where((w) => w.length > 2).toSet();
+    final candWords = candClean.split(' ').where((w) => w.length > 2).toSet();
+    if (origWords.isEmpty || candWords.isEmpty) return false;
+    
+    final overlap = origWords.intersection(candWords).length;
+    if (overlap >= origWords.length * 0.7 || overlap >= candWords.length * 0.7) return true;
+    
+    return false;
+  }
+
+
+  Future<List<SongModel>> _resolveThumbnailsAsync(List<SongModel> songs) async {
+    final saavn = Get.find<SaavnApi>();
+    final futures = songs.map((s) async {
+      if (s.thumbnailUrl.isEmpty || s.thumbnailUrl.contains('2a96cbd8b46e442fc41c2b86b821562f')) {
+        try {
+          final res = await saavn.searchSongs('${s.title} ${s.artist}');
+          if (res.isNotEmpty) {
+            return s.copyWith(thumbnailUrl: res.first.thumbnailUrl);
+          }
+        } catch (_) {}
+      }
+      return s;
+    });
+    return (await Future.wait(futures)).toList();
+  }
+
   Future<void> _fetchAndAppendSimilar(SongModel song) async {
     try {
       final primaryArtist = _getPrimaryArtist(song.artist);
@@ -730,7 +793,7 @@ class AudioPlayerController extends GetxController {
           try {
             final query = '$cleanedTitle $primaryArtist radio';
             final ytResults = await yt.search(query);
-            similar = ytResults.where((s) => s.title.toLowerCase() != song.title.toLowerCase()).toList();
+            similar = ytResults.where((s) => !_isVariation(cleanedTitle, s.title, s.artist)).toList();
           } catch (e) {
             debugPrint('Autoplay Fallback 2 (YouTube Radio Search) failed: $e');
           }
@@ -739,7 +802,7 @@ class AudioPlayerController extends GetxController {
         if (similar.isEmpty) {
           try {
             final ytResults = await yt.search('$primaryArtist songs');
-            similar = ytResults.where((s) => s.title.toLowerCase() != song.title.toLowerCase()).toList();
+            similar = ytResults.where((s) => !_isVariation(cleanedTitle, s.title, s.artist)).toList();
           } catch (e) {
             debugPrint('Autoplay Fallback 3 (YouTube Artist Search) failed: $e');
           }
@@ -750,7 +813,7 @@ class AudioPlayerController extends GetxController {
             final query = '$cleanedTitle $primaryArtist radio';
             final searchResults = await saavn.searchSongs(query);
             similar = searchResults
-                .where((s) => s.title.toLowerCase() != song.title.toLowerCase())
+                .where((s) => !_isVariation(cleanedTitle, s.title, s.artist))
                 .map((s) => s.copyWith(source: MusicSource.youtube, sourceId: ''))
                 .toList();
           } catch (e) {
@@ -763,7 +826,7 @@ class AudioPlayerController extends GetxController {
           try {
             final query = '$cleanedTitle $primaryArtist radio';
             final searchResults = await saavn.searchSongs(query);
-            similar = searchResults.where((s) => s.title.toLowerCase() != song.title.toLowerCase()).toList();
+            similar = searchResults.where((s) => !_isVariation(cleanedTitle, s.title, s.artist)).toList();
           } catch (e) {
             debugPrint('Autoplay Fallback 2 (Saavn Radio Search) failed: $e');
           }
@@ -774,7 +837,7 @@ class AudioPlayerController extends GetxController {
             final artistId = await saavn.searchArtist(primaryArtist);
             if (artistId != null) {
               final songs = await saavn.getArtistSongs(artistId);
-              similar = songs.where((s) => s.title.toLowerCase() != song.title.toLowerCase()).toList();
+              similar = songs.where((s) => !_isVariation(cleanedTitle, s.title, s.artist)).toList();
             }
           } catch (e) {
             debugPrint('Autoplay Fallback 3 (Saavn Artist Details) failed: $e');
@@ -786,7 +849,7 @@ class AudioPlayerController extends GetxController {
             final query = '$cleanedTitle $primaryArtist radio';
             final ytResults = await yt.search(query);
             similar = ytResults
-                .where((s) => s.title.toLowerCase() != song.title.toLowerCase())
+                .where((s) => !_isVariation(cleanedTitle, s.title, s.artist))
                 .map((s) => s.copyWith(source: MusicSource.saavn, sourceId: ''))
                 .toList();
           } catch (e) {

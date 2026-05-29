@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:ui';
 import 'package:get/get.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:shimmer/shimmer.dart';
@@ -248,8 +249,27 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
         ),
       ),
       extendBodyBehindAppBar: true,
-      body: CustomScrollView(
-        slivers: [
+      body: Stack(
+        children: [
+          if (widget.imageUrl.isNotEmpty)
+            Positioned.fill(
+              child: CachedNetworkImage(
+                imageUrl: widget.imageUrl,
+                fit: BoxFit.cover,
+                errorWidget: (context, url, error) => const SizedBox(),
+              ),
+            ),
+          if (widget.imageUrl.isNotEmpty)
+            Positioned.fill(
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 50, sigmaY: 50),
+                child: Container(
+                  color: colorScheme.surface.withAlpha(180),
+                ),
+              ),
+            ),
+          CustomScrollView(
+            slivers: [
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.fromLTRB(20, 100, 20, 20),
@@ -595,44 +615,7 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                   ),
                 ),
               ),
-            if (_songs.isEmpty && _suggestions.isNotEmpty)
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 10,
-                  ),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: colorScheme.primary.withAlpha(15),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: colorScheme.primary.withAlpha(30),
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.auto_awesome_rounded,
-                          color: colorScheme.primary,
-                          size: 24,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'This playlist has no tracks, but here are some recommended songs based on its vibes:',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: colorScheme.onSurface.withAlpha(200),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+
             if (_suggestions.isNotEmpty) ...[
               SliverToBoxAdapter(
                 child: Padding(
@@ -810,6 +793,8 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
           ],
           const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
+      ),
+      ],
       ),
     );
   }

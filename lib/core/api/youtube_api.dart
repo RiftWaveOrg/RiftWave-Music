@@ -19,6 +19,10 @@ class YouTubeApi extends GetxService {
       final List<SongModel> songs = [];
 
       for (final video in searchList) {
+        final duration = video.duration?.inMilliseconds ?? 0;
+        if (duration < 60000 || duration > 900000) {
+          continue;
+        }
         songs.add(
           SongModel(
             id: video.id.value,
@@ -27,7 +31,7 @@ class YouTubeApi extends GetxService {
             album: 'YouTube',
             thumbnailUrl: video.thumbnails.highResUrl,
             audioUrl: '',
-            durationMs: video.duration?.inMilliseconds ?? 0,
+            durationMs: duration,
             source: MusicSource.youtube,
             sourceId: video.id.value,
           ),
@@ -75,38 +79,9 @@ class YouTubeApi extends GetxService {
     }
   }
 
-  Future<List<SongModel>> getTrending() async {
+  Future<List<SongModel>> getTrending(String query) async {
     try {
-      const playlistId = 'PLMC9KNkIncKseYxDN2niHghoYbaaxL1y7';
-      final List<SongModel> songs = [];
-      try {
-        final playlistVideos = await _yt.playlists
-            .getVideos(playlistId)
-            .take(20)
-            .toList();
-        for (final video in playlistVideos) {
-          songs.add(
-            SongModel(
-              id: video.id.value,
-              title: video.title,
-              artist: video.author,
-              album: 'Trending Hits',
-              thumbnailUrl: video.thumbnails.highResUrl,
-              audioUrl: '',
-              durationMs: video.duration?.inMilliseconds ?? 0,
-              source: MusicSource.youtube,
-              sourceId: video.id.value,
-            ),
-          );
-        }
-      } catch (_) {
-        return await search('trending songs');
-      }
-
-      if (songs.isEmpty) {
-        return await search('trending songs');
-      }
-      return songs;
+      return await search(query);
     } on SocketException {
       throw NoInternetException();
     } on HttpException {
@@ -152,71 +127,21 @@ class YouTubeApi extends GetxService {
 
   Future<List<Map<String, dynamic>>> getPopularPlaylists(String query) async {
     try {
-      final curatedPlaylistIds = [
-        'PLDIoUOhQQPlXr63I44jhd6tF8IRSXE7RA',
-        'PLFgquLnL59alCl_2TQvOiD5Vgm1hCaGSI',
-        'PLJEJ2D6jmY0Y5CxQrFIJ2oI_EAmTJoU5v',
-        'PLH6pfBXQXHEC2uDmDy5oi3tHW6X8kogNp',
-        'PLGBuKfnErZlANkEf0FmZMcjHOkT9HbhXZ',
-        'PLYiHmos7pCPKMbhMzirHF_fI36_Q_lY3Y',
-        'PL4fGSI1pDJn6O1LS0XSdF3RyO0Rq_LDeI',
-        'PLDcnymzs18LWLKtkDrLEBg-y1jAfkm5Mz',
-      ];
-
       final List<Map<String, dynamic>> playlists = [];
-
-      final futures = curatedPlaylistIds.map((id) async {
-        try {
-          final playlist = await _yt.playlists.get(id);
-          String thumbnailUrl = '';
-          try {
-            final videos = await _yt.playlists.getVideos(id).take(1).toList();
-            if (videos.isNotEmpty) {
-              thumbnailUrl = videos.first.thumbnails.highResUrl;
-            }
-          } catch (_) {}
-          if (thumbnailUrl.isEmpty) {
-            thumbnailUrl =
-                'https://img.youtube.com/vi/${id.hashCode}/hqdefault.jpg';
-          }
-          return {
-            'id': id,
-            'title': playlist.title,
-            'subtitle': '${playlist.videoCount ?? '?'} tracks • YouTube',
-            'thumbnailUrl': thumbnailUrl,
-          };
-        } catch (_) {
-          return null;
-        }
-      }).toList();
-
-      final results = await Future.wait(futures);
-      for (final r in results) {
-        if (r != null) playlists.add(r);
-      }
-
-      if (playlists.length < curatedPlaylistIds.length) {
-        final searchResults = await _yt.search.searchContent(query);
-        int idx = 0;
-        final fallbackLimit = curatedPlaylistIds.length - playlists.length;
-        final existingIds = playlists
-            .map((playlist) => playlist['id'] as String? ?? '')
-            .toSet();
-        for (final pl in searchResults) {
-          if (pl is SearchPlaylist &&
-              idx < fallbackLimit &&
-              !existingIds.contains(pl.id.value)) {
-            final imageUrl = pl.thumbnails.isNotEmpty
-                ? pl.thumbnails.first.url.toString()
-                : 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=400&q=80';
-            playlists.add({
-              'id': pl.id.value,
-              'title': pl.title,
-              'subtitle': '${pl.videoCount} tracks • YouTube',
-              'thumbnailUrl': imageUrl,
-            });
-            idx++;
-          }
+      final searchResults = await _yt.search.searchContent(query);
+      
+      for (final pl in searchResults) {
+        if (pl is SearchPlaylist) {
+          final imageUrl = pl.thumbnails.isNotEmpty
+              ? pl.thumbnails.first.url.toString()
+              : 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=400&q=80';
+          playlists.add({
+            'id': pl.id.value,
+            'title': pl.title,
+            'subtitle': '${pl.videoCount} tracks • YouTube',
+            'thumbnailUrl': imageUrl,
+          });
+          if (playlists.length >= 10) break;
         }
       }
 

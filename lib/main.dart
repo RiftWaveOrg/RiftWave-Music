@@ -18,6 +18,7 @@ import 'package:riftwave_music/shared/controllers/audio_player_controller.dart';
 
 import 'package:riftwave_music/features/player/controllers/lyrics_controller.dart';
 import 'package:riftwave_music/shared/controllers/history_controller.dart';
+import 'package:riftwave_music/core/services/recommendation_engine.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -59,6 +60,7 @@ void main() async {
   Get.put(AudioPlayerController(), permanent: true);
   Get.put(LyricsController(), permanent: true);
   Get.put(HistoryController(), permanent: true);
+  Get.put(RecommendationEngine(), permanent: true);
 
   runApp(const RiftWaveApp());
 }

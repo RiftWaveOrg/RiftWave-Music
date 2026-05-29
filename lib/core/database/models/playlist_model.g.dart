@@ -1,10 +1,6 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
 
 part of 'playlist_model.dart';
 
-// **************************************************************************
-// TypeAdapterGenerator
-// **************************************************************************
 
 class PlaylistModelAdapter extends TypeAdapter<PlaylistModel> {
   @override
