@@ -23,6 +23,8 @@ class AppPages {
     GetPage(
       name: AppRoutes.main,
       page: () => const MainNavigation(),
+      transition: Transition.downToUp,
+      transitionDuration: const Duration(milliseconds: 300),
       bindings: [
         HomeBinding(),
         SearchBinding(),
@@ -34,16 +36,22 @@ class AppPages {
       name: AppRoutes.home,
       page: () => const HomeScreen(),
       binding: HomeBinding(),
+      transition: Transition.downToUp,
+      transitionDuration: const Duration(milliseconds: 300),
     ),
     GetPage(
       name: AppRoutes.search,
       page: () => const SearchScreen(),
       binding: SearchBinding(),
+      transition: Transition.downToUp,
+      transitionDuration: const Duration(milliseconds: 300),
     ),
     GetPage(
       name: AppRoutes.player,
       page: () => const PlayerScreen(),
       binding: PlayerBinding(),
+      transition: Transition.downToUp,
+      transitionDuration: const Duration(milliseconds: 400),
     ),
     GetPage(
       name: AppRoutes.library,

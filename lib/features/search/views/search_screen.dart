@@ -5,6 +5,7 @@ import 'package:riftwave_music/features/search/controllers/search_controller.dar
 import 'package:riftwave_music/features/settings/controllers/settings_controller.dart';
 import 'package:riftwave_music/shared/controllers/audio_player_controller.dart';
 import 'package:riftwave_music/shared/widgets/song_tile.dart';
+import 'package:riftwave_music/shared/widgets/empty_state_lottie.dart';
 import 'package:riftwave_music/core/database/models/song_model.dart';
 import 'package:riftwave_music/routes/app_routes.dart';
 import 'package:riftwave_music/features/home/views/content_detail_screen.dart';

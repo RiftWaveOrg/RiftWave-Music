@@ -1,11 +1,13 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:riftwave_music/features/library/controllers/library_controller.dart';
 import 'package:riftwave_music/shared/controllers/audio_player_controller.dart';
 import 'package:riftwave_music/shared/controllers/download_controller.dart';
 import 'package:riftwave_music/shared/widgets/song_tile.dart';
+import 'package:riftwave_music/shared/widgets/empty_state_lottie.dart';
 import 'package:riftwave_music/routes/app_routes.dart';
 
 class LibraryScreen extends StatelessWidget {
@@ -326,10 +328,11 @@ class LibraryScreen extends StatelessWidget {
   Widget _buildPlaylists(BuildContext context, ColorScheme colorScheme, LibraryController library) {
     if (library.playlists.isEmpty) {
       return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        child: Text(
-          'No custom playlists yet. Tap the + icon to create one.',
-          style: TextStyle(color: colorScheme.onSurface.withAlpha(150)),
+        padding: const EdgeInsets.symmetric(vertical: 20),
+        child: EmptyStateLottie(
+          type: EmptyStateType.library,
+          title: 'No Playlists',
+          subtitle: 'Tap the + icon to create one.',
         ),
       );
     }
@@ -392,14 +395,10 @@ class LibraryScreen extends StatelessWidget {
 
   Widget _buildHistoryList(LibraryController library, ColorScheme colorScheme) {
     if (library.history.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 40),
-          child: Text(
-            'No listening history yet.',
-            style: TextStyle(color: colorScheme.onSurface.withAlpha(150)),
-          ),
-        ),
+      return EmptyStateLottie(
+        type: EmptyStateType.history,
+        title: 'No Listening History',
+        subtitle: 'Songs you play will appear here.',
       );
     }
 
@@ -523,7 +522,8 @@ class LibraryScreen extends StatelessWidget {
               leading: const Icon(Icons.delete_rounded, color: Colors.red),
               title: const Text('Delete Playlist', style: TextStyle(color: Colors.red)),
               onTap: () {
-                library.deletePlaylist(id);
+                HapticFeedback.mediumImpact();
+                  library.deletePlaylist(id);
                 Get.back();
               },
             ),

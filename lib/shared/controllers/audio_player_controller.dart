@@ -6,6 +6,7 @@ import 'package:audio_service/audio_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:just_audio/just_audio.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -21,6 +22,7 @@ import 'package:riftwave_music/features/library/controllers/library_controller.d
 import 'package:riftwave_music/features/player/controllers/dynamic_color_controller.dart';
 import 'package:riftwave_music/core/services/recommendation_engine.dart';
 import 'package:riftwave_music/shared/controllers/video_player_controller.dart';
+import 'package:riftwave_music/features/player/controllers/lyrics_controller.dart';
 
 class AudioPlayerController extends GetxController {
   late final RiftWaveAudioHandler _audioHandler;
@@ -80,7 +82,15 @@ class AudioPlayerController extends GetxController {
         _lastSuggestionSongId = song.id;
         _refreshUpNextSuggestions(song);
       }
+
     });
+
+    interval(currentPosition, (pos) async {
+      final prefs = await SharedPreferences.getInstance();
+      if (currentSong.value != null) {
+        await prefs.setInt('last_position_', pos.inSeconds);
+      }
+    }, time: const Duration(seconds: 5));
   }
 
   Future<void> _requestNotificationPermission() async {
@@ -93,9 +103,8 @@ class AudioPlayerController extends GetxController {
           final theme = Theme.of(Get.context!);
           final colorScheme = theme.colorScheme;
           
-          final shouldRequest = await showDialog<bool>(
-            context: Get.context!,
-            builder: (context) => AlertDialog(
+          final shouldRequest = await Get.dialog<bool>(
+            AlertDialog(
               backgroundColor: colorScheme.surface,
               surfaceTintColor: Colors.transparent,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
@@ -113,11 +122,11 @@ class AudioPlayerController extends GetxController {
               actionsAlignment: MainAxisAlignment.spaceEvenly,
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
+                  onPressed: () => Get.back(result: false),
                   child: Text('Not Now', style: TextStyle(color: colorScheme.onSurface.withAlpha(150))),
                 ),
                 FilledButton(
-                  onPressed: () => Navigator.of(context).pop(true),
+                  onPressed: () => Get.back(result: true),
                   style: FilledButton.styleFrom(
                     backgroundColor: colorScheme.primary,
                     foregroundColor: colorScheme.onPrimary,
