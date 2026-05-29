@@ -18,13 +18,13 @@ class LoadingShimmer extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
 
     return Shimmer.fromColors(
-      baseColor: colorScheme.surfaceContainerHighest,
-      highlightColor: colorScheme.surfaceContainerHighest.withAlpha(120),
+      baseColor: const Color(0xFF121212),
+      highlightColor: const Color(0xFF2A2A2A),
       child: Container(
         width: width,
         height: height,
         decoration: BoxDecoration(
-          color: colorScheme.surfaceContainerHighest,
+          color: const Color(0xFF121212),
           borderRadius: BorderRadius.circular(borderRadius),
         ),
       ),

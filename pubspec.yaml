@@ -49,6 +49,9 @@ dependencies:
   media_kit: ^1.2.6
   media_kit_video: ^2.0.1
   media_kit_libs_video: ^1.0.7
+  open_file: ^3.5.11
+  package_info_plus: ^9.0.1
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:

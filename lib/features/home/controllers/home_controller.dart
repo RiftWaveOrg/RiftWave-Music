@@ -7,6 +7,7 @@ import 'package:riftwave_music/core/api/youtube_api.dart';
 import 'package:riftwave_music/core/services/recommendation_engine.dart';
 import 'package:riftwave_music/features/library/controllers/library_controller.dart';
 import 'package:riftwave_music/features/settings/controllers/settings_controller.dart';
+import 'package:riftwave_music/shared/controllers/update_controller.dart';
 
 class HomeController extends GetxController {
   final RxList<SongModel> trendingSongs = <SongModel>[].obs;

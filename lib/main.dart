@@ -20,6 +20,7 @@ import 'package:riftwave_music/features/player/controllers/lyrics_controller.dar
 import 'package:riftwave_music/core/services/recommendation_engine.dart';
 import 'package:riftwave_music/features/library/controllers/library_controller.dart';
 import 'package:riftwave_music/shared/controllers/download_controller.dart';
+import 'package:riftwave_music/shared/controllers/update_controller.dart';
 
 import 'package:media_kit/media_kit.dart';
 
@@ -67,6 +68,7 @@ void main() async {
   
   
   Get.put(DownloadController(), permanent: true);
+  Get.put(UpdateController(), permanent: true);
   Get.lazyPut(() => LibraryController(), fenix: true);
 
   runApp(const RiftWaveApp());

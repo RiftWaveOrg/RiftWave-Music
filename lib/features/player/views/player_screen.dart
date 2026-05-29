@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:share_plus/share_plus.dart';
@@ -83,9 +84,8 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
   }
 
   void _showSongDetailsDialog(BuildContext context, SongModel song, PlayerColors colors) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
+    Get.dialog(
+      AlertDialog(
         backgroundColor: colors.surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text(
@@ -910,7 +910,7 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
             color: colors.textPrimary,
             size: 34,
           ),
-          onPressed: _audioController.skipToPrevious,
+          onPressed: () { HapticFeedback.lightImpact(); _audioController.skipToPrevious(); },
         ),
         Obx(() {
           final bool isLoading = _audioController.isBuffering.value ||
@@ -918,7 +918,7 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
           final bool isPlaying = _audioController.isPlaying.value;
 
           return GestureDetector(
-              onTap: _audioController.togglePlayPause,
+              onTap: () { HapticFeedback.lightImpact(); _audioController.togglePlayPause(); },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 300),
                 width: 60,
@@ -966,7 +966,7 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
             color: colors.textPrimary,
             size: 34,
           ),
-          onPressed: _audioController.skipToNext,
+          onPressed: () { HapticFeedback.lightImpact(); _audioController.skipToNext(); },
         ),
         Obx(() {
           final mode = _audioController.repeatMode.value;
