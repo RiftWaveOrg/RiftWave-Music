@@ -104,31 +104,49 @@ class PlayerController extends GetxController {
     artistBio.value = '';
     try {
       final primaryArtist = _getPrimaryArtist(artist);
-      final saavn = Get.find<SaavnApi>();
+      debugPrint('PlayerController._fetchArtistBio: starting search for "$primaryArtist" (original: "$artist")');
 
-      final artistId = await saavn.searchArtist(primaryArtist);
-      if (artistId != null) {
-        final details = await saavn.getArtistDetails(artistId);
-        final bio = details['biography'] as String? ?? '';
+      // Try 1: JioSaavn Artist Biography
+      try {
+        final saavn = Get.find<SaavnApi>();
+        debugPrint('PlayerController._fetchArtistBio: trying JioSaavn for "$primaryArtist"');
+        final artistId = await saavn.searchArtist(primaryArtist);
+        if (artistId != null) {
+          final details = await saavn.getArtistDetails(artistId);
+          final bio = details['biography'] as String? ?? '';
+          if (bio.isNotEmpty) {
+            debugPrint('PlayerController._fetchArtistBio: JioSaavn bio loaded successfully (length: ${bio.length})');
+            artistBio.value = bio;
+            return;
+          }
+          debugPrint('PlayerController._fetchArtistBio: JioSaavn bio was empty');
+        } else {
+          debugPrint('PlayerController._fetchArtistBio: JioSaavn artist ID not found');
+        }
+      } catch (e) {
+        debugPrint('PlayerController._fetchArtistBio JioSaavn Error: $e');
+      }
+
+      // Try 2: Last.fm Artist Biography
+      try {
+        final lastfm = Get.find<LastFmApi>();
+        debugPrint('PlayerController._fetchArtistBio: trying Last.fm for "$primaryArtist"');
+        final bio = await lastfm.getArtistBio(primaryArtist);
         if (bio.isNotEmpty) {
+          debugPrint('PlayerController._fetchArtistBio: Last.fm bio loaded successfully (length: ${bio.length})');
           artistBio.value = bio;
           return;
         }
+        debugPrint('PlayerController._fetchArtistBio: Last.fm bio was empty');
+      } catch (e) {
+        debugPrint('PlayerController._fetchArtistBio Last.fm Error: $e');
       }
 
-      final lastfm = Get.find<LastFmApi>();
-      final bio = await lastfm.getArtistBio(primaryArtist);
-      artistBio.value = bio.isNotEmpty ? bio : 'No biography available for this artist.';
+      debugPrint('PlayerController._fetchArtistBio: no biography available from any source');
+      artistBio.value = 'No biography available for this artist.';
     } catch (e) {
-
-      try {
-        final primaryArtist = _getPrimaryArtist(artist);
-        final lastfm = Get.find<LastFmApi>();
-        final bio = await lastfm.getArtistBio(primaryArtist);
-        artistBio.value = bio.isNotEmpty ? bio : 'No biography available for this artist.';
-      } catch (lastFmError) {
-        artistBio.value = 'Failed to load artist biography: $lastFmError';
-      }
+      debugPrint('PlayerController._fetchArtistBio: outer catch error: $e');
+      artistBio.value = 'No biography available for this artist.';
     } finally {
       isLoadingBio.value = false;
     }
@@ -183,6 +201,11 @@ class PlayerController extends GetxController {
   String _getPrimaryArtist(String artist) {
     if (artist.isEmpty) return '';
     String cleaned = artist;
+    
+    // Clean YouTube specific suffixes like " - Topic" or VEVO
+    cleaned = cleaned.replaceAll(RegExp(r'\s*-\s*Topic$', caseSensitive: false), '');
+    cleaned = cleaned.replaceAll(RegExp(r'\s*VEVO$', caseSensitive: false), '');
+    
     final dividers = [
       RegExp(r'\bfeat\.?\b', caseSensitive: false),
       RegExp(r'\bft\.?\b', caseSensitive: false),

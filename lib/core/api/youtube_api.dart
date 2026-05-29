@@ -44,11 +44,20 @@ class YouTubeApi extends GetxService {
 
   Future<String> getStreamUrl(String videoId) async {
     try {
-      final manifest = await _yt.videos.streamsClient.getManifest(
-        videoId,
-        ytClients: [YoutubeApiClient.androidVr],
-      );
-      final audioStream = manifest.audioOnly.withHighestBitrate();
+      StreamManifest manifest;
+      try {
+        manifest = await _yt.videos.streamsClient.getManifest(
+          videoId,
+          ytClients: [YoutubeApiClient.androidVr],
+        );
+      } catch (_) {
+        manifest = await _yt.videos.streamsClient.getManifest(videoId);
+      }
+      // Prefer Container.mp4 (AAC) streams over WebM (Opus) to ensure 100% compatibility with all device decoders.
+      final mp4Streams = manifest.audioOnly.where((stream) => stream.container.name == 'mp4').toList();
+      final audioStream = mp4Streams.isNotEmpty
+          ? mp4Streams.withHighestBitrate()
+          : manifest.audioOnly.withHighestBitrate();
       return audioStream.url.toString();
     } on SocketException {
       throw NoInternetException();

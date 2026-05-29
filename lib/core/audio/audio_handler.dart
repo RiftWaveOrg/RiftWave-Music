@@ -6,7 +6,6 @@ import 'package:just_audio/just_audio.dart';
 class RiftWaveAudioHandler extends BaseAudioHandler with SeekHandler {
   final AudioPlayer _player = AudioPlayer(
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    useProxyForRequestHeaders: false,
   );
 
   late final StreamSubscription<PlayerState> _playerStateSub;
@@ -45,25 +44,14 @@ class RiftWaveAudioHandler extends BaseAudioHandler with SeekHandler {
     mediaItem.add(item);
     debugPrint('RiftWaveAudioHandler: Loading audio URL: $audioUrl');
     final uri = Uri.parse(audioUrl);
-
-    final headers = <String, String>{};
-    if (audioUrl.contains('youtube.com') || audioUrl.contains('googlevideo.com')) {
-      headers['Referer'] = 'https://www.youtube.com/';
-    }
-
-    await _player.setAudioSource(AudioSource.uri(uri, headers: headers));
+    await _player.setAudioSource(AudioSource.uri(uri));
     await _player.play();
   }
 
   @override
   Future<void> prepareFromUri(Uri uri, [Map<String, dynamic>? extras]) async {
     try {
-      final audioUrl = uri.toString();
-      final headers = <String, String>{};
-      if (audioUrl.contains('youtube.com') || audioUrl.contains('googlevideo.com')) {
-        headers['Referer'] = 'https://www.youtube.com/';
-      }
-      await _player.setAudioSource(AudioSource.uri(uri, headers: headers));
+      await _player.setAudioSource(AudioSource.uri(uri));
     } catch (e) {
       debugPrint('RiftWaveAudioHandler: Failed to prepare audio — $e');
     }
@@ -103,6 +91,10 @@ class RiftWaveAudioHandler extends BaseAudioHandler with SeekHandler {
   @override
   Future<void> setSpeed(double speed) async {
     await _player.setSpeed(speed);
+  }
+
+  Future<void> setVolume(double volume) async {
+    await _player.setVolume(volume.clamp(0.0, 1.0));
   }
 
   @override

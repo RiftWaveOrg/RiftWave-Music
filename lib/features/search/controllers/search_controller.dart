@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:riftwave_music/core/database/models/song_model.dart';
 import 'package:riftwave_music/core/api/youtube_api.dart';
@@ -11,6 +12,13 @@ class RiftSearchController extends GetxController {
   final RxBool isSearching = false.obs;
   final RxList<SongModel> searchResults = <SongModel>[].obs;
   final Rx<SearchTab> activeTab = SearchTab.youtube.obs;
+  late final TextEditingController textController;
+
+  @override
+  void onInit() {
+    super.onInit();
+    textController = TextEditingController();
+  }
 
   void setActiveTab(SearchTab tab) {
     activeTab.value = tab;
@@ -19,6 +27,9 @@ class RiftSearchController extends GetxController {
   Timer? _debounce;
 
   void search(String value) {
+    if (textController.text != value) {
+      textController.text = value;
+    }
     query.value = value;
     if (_debounce?.isActive ?? false) _debounce?.cancel();
 
@@ -57,6 +68,7 @@ class RiftSearchController extends GetxController {
   }
 
   void clearSearch() {
+    textController.clear();
     query.value = '';
     searchResults.clear();
     isSearching.value = false;
@@ -66,6 +78,7 @@ class RiftSearchController extends GetxController {
   @override
   void onClose() {
     _debounce?.cancel();
+    textController.dispose();
     super.onClose();
   }
 }

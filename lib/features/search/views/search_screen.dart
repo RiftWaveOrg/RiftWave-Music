@@ -5,6 +5,8 @@ import 'package:riftwave_music/features/search/controllers/search_controller.dar
 import 'package:riftwave_music/shared/controllers/audio_player_controller.dart';
 import 'package:riftwave_music/shared/widgets/song_tile.dart';
 import 'package:riftwave_music/core/database/models/song_model.dart';
+import 'package:riftwave_music/routes/app_routes.dart';
+
 
 class SearchScreen extends GetView<RiftSearchController> {
   const SearchScreen({super.key});
@@ -38,6 +40,7 @@ class SearchScreen extends GetView<RiftSearchController> {
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: TextField(
+                  controller: controller.textController,
                   onChanged: controller.search,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: InputDecoration(
@@ -146,7 +149,10 @@ class SearchScreen extends GetView<RiftSearchController> {
                                     artist: song.artist,
                                     thumbnailUrl: song.thumbnailUrl,
                                     isPlaying: isCurrent && playerController.isPlaying.value,
-                                    onTap: () => playerController.playSong(song),
+                                    onTap: () {
+                                      playerController.playSong(song);
+                                      Get.toNamed(AppRoutes.player);
+                                    },
                                     trailing: controller.activeTab.value == SearchTab.all
                                         ? Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
