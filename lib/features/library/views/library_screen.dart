@@ -47,7 +47,7 @@ class LibraryScreen extends StatelessWidget {
                 ),
               ),
 
-              // Liked & Downloaded Cards
+              
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 sliver: SliverToBoxAdapter(
@@ -62,7 +62,7 @@ class LibraryScreen extends StatelessWidget {
               ),
               const SliverToBoxAdapter(child: SizedBox(height: 30)),
 
-              // Custom Playlists
+              
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 sliver: SliverToBoxAdapter(
@@ -78,7 +78,7 @@ class LibraryScreen extends StatelessWidget {
                 ),
               ),
 
-              // History Section
+              
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 sliver: SliverToBoxAdapter(
@@ -104,7 +104,7 @@ class LibraryScreen extends StatelessWidget {
                 ),
               ),
               
-              const SliverToBoxAdapter(child: SizedBox(height: 100)), // Bottom padding
+              const SliverToBoxAdapter(child: SizedBox(height: 100)), 
             ],
           );
         }),
@@ -366,7 +366,7 @@ class LibraryScreen extends StatelessWidget {
                     child: playlist.songCount > 0
                         ? ClipRRect(
                             borderRadius: BorderRadius.circular(16),
-                            child: const Icon(Icons.playlist_play_rounded, size: 64, color: Colors.white54), // We can update this to show actual thumbnails later
+                            child: const Icon(Icons.playlist_play_rounded, size: 64, color: Colors.white54), 
                           )
                         : const Icon(Icons.library_music_rounded, size: 48, color: Colors.white30),
                   ),
@@ -516,7 +516,7 @@ class LibraryScreen extends StatelessWidget {
               title: const Text('Rename Playlist'),
               onTap: () {
                 Get.back();
-                // We could add a rename dialog here
+                
               },
             ),
             ListTile(

@@ -79,6 +79,55 @@ class YouTubeApi extends GetxService {
     }
   }
 
+  Future<Map<String, String>?> getDualStreamManifest(String videoId, String qualityPreference) async {
+    try {
+      StreamManifest manifest;
+      try {
+        manifest = await _yt.videos.streamsClient.getManifest(
+          videoId,
+          ytClients: [YoutubeApiClient.ios, YoutubeApiClient.androidVr],
+        );
+      } catch (_) {
+        manifest = await _yt.videos.streamsClient.getManifest(videoId);
+      }
+
+      
+      var videoStreams = manifest.videoOnly.where((stream) => stream.container.name == 'mp4').toList();
+      if (videoStreams.isEmpty) {
+        
+        videoStreams = manifest.videoOnly.toList();
+      }
+      
+      if (videoStreams.isEmpty) return null;
+
+      
+      VideoStreamInfo? selectedVideo;
+      if (qualityPreference != 'Auto') {
+        final targetRes = int.tryParse(qualityPreference.replaceAll('p', '')) ?? 1080;
+        selectedVideo = videoStreams.where((s) => s.videoResolution.height <= targetRes).fold<VideoStreamInfo?>(
+          null, 
+          (prev, elem) => (prev == null || elem.videoResolution.height > prev.videoResolution.height) ? elem : prev
+        );
+      }
+      
+      selectedVideo ??= videoStreams.withHighestBitrate();
+
+      
+      final mp4AudioStreams = manifest.audioOnly.where((stream) => stream.container.name == 'mp4').toList();
+      final selectedAudio = mp4AudioStreams.isNotEmpty
+          ? mp4AudioStreams.withHighestBitrate()
+          : manifest.audioOnly.withHighestBitrate();
+
+      return {
+        'videoUrl': selectedVideo.url.toString(),
+        'audioUrl': selectedAudio.url.toString(),
+      };
+    } catch (e) {
+      print('Dual stream extraction error: $e');
+      return null;
+    }
+  }
+
   Future<List<SongModel>> getTrending(String query) async {
     try {
       return await search(query);

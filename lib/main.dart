@@ -21,8 +21,11 @@ import 'package:riftwave_music/core/services/recommendation_engine.dart';
 import 'package:riftwave_music/features/library/controllers/library_controller.dart';
 import 'package:riftwave_music/shared/controllers/download_controller.dart';
 
+import 'package:media_kit/media_kit.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  MediaKit.ensureInitialized();
 
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarColor: Colors.transparent,
@@ -62,7 +65,7 @@ void main() async {
   Get.put(LyricsController(), permanent: true);
   Get.put(RecommendationEngine(), permanent: true);
   
-  // Phase 8 Controllers
+  
   Get.put(DownloadController(), permanent: true);
   Get.lazyPut(() => LibraryController(), fenix: true);
 

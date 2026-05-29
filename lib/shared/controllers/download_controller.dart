@@ -33,13 +33,13 @@ class DownloadController extends GetxController {
 
       final savePath = '${saveDir.path}/${song.id}.mp3';
       
-      // If already downloaded (e.g. from a previous partial download), remove it
+      
       final file = File(savePath);
       if (await file.exists()) {
         await file.delete();
       }
 
-      // Always fetch a fresh stream URL for downloads to avoid expired links
+      
       String audioUrl = '';
       if (song.source == MusicSource.youtube) {
         final yt = Get.find<YouTubeApi>();
@@ -126,7 +126,7 @@ class DownloadController extends GetxController {
       }
     }
     
-    // Clear the box completely
+    
     final box = Hive.box<SongModel>('downloads_box');
     await box.clear();
     libraryController.downloadedSongs.clear();

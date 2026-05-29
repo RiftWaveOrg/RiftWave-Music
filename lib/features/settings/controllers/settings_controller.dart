@@ -9,10 +9,16 @@ class SettingsController extends GetxController {
   static const String _themeKey = 'theme_variant';
   static const String _qualityKey = 'audio_quality';
   static const String _regionKey = 'region_code';
+  static const String _videoModeKey = 'video_mode';
+  static const String _videoQualityKey = 'video_quality';
+  static const String _dataWarningKey = 'has_seen_data_warning';
 
   final Rx<ThemeVariant> themeVariant = ThemeVariant.dark.obs;
   final RxString audioQuality = '320kbps'.obs;
   final RxString regionCode = 'IN'.obs;
+  final RxBool videoModeEnabled = false.obs;
+  final RxString videoQuality = 'Auto'.obs;
+  final RxBool hasSeenDataWarning = false.obs;
 
   @override
   void onInit() {
@@ -40,6 +46,10 @@ class SettingsController extends GetxController {
     } else {
       regionCode.value = _detectRegionFromLocale();
     }
+
+    videoModeEnabled.value = prefs.getBool(_videoModeKey) ?? false;
+    videoQuality.value = prefs.getString(_videoQualityKey) ?? 'Auto';
+    hasSeenDataWarning.value = prefs.getBool(_dataWarningKey) ?? false;
   }
 
   String _detectRegionFromLocale() {
@@ -66,10 +76,28 @@ class SettingsController extends GetxController {
     await prefs.setString(_qualityKey, quality);
   }
 
-  Future<void> setRegion(String code) async {
+  Future<void> setRegionCode(String code) async {
     regionCode.value = code;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_regionKey, code);
+  }
+
+  Future<void> setVideoMode(bool enabled) async {
+    videoModeEnabled.value = enabled;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_videoModeKey, enabled);
+  }
+
+  Future<void> setVideoQuality(String quality) async {
+    videoQuality.value = quality;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_videoQualityKey, quality);
+  }
+
+  Future<void> markDataWarningSeen() async {
+    hasSeenDataWarning.value = true;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_dataWarningKey, true);
   }
 
   bool get isAmoled => themeVariant.value == ThemeVariant.amoled;

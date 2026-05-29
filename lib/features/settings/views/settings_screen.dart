@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:riftwave_music/features/settings/controllers/settings_controller.dart';
 import 'package:riftwave_music/core/models/region.dart';
 
@@ -80,6 +81,48 @@ class SettingsScreen extends GetView<SettingsController> {
               subtitle: 'High (320kbps)',
               onTap: () {},
             ).animate().fadeIn(duration: 400.ms, delay: 250.ms),
+
+            const SizedBox(height: 24),
+
+            _buildSectionTitle(theme, 'Video Playback'),
+            const SizedBox(height: 12),
+            Obx(() => _buildSettingsSwitchTile(
+              colorScheme: colorScheme,
+              icon: Icons.video_library_rounded,
+              title: 'Music Video Mode',
+              subtitle: 'Play HD music videos (YouTube only)',
+              value: controller.videoModeEnabled.value,
+              onChanged: (val) {
+                controller.setVideoMode(val);
+                if (val && !controller.hasSeenDataWarning.value) {
+                  _showDataWarning(context);
+                }
+              },
+            )).animate().fadeIn(duration: 400.ms, delay: 280.ms),
+            const SizedBox(height: 8),
+            Obx(() {
+              if (!controller.videoModeEnabled.value) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: _buildSettingsTile(
+                  colorScheme: colorScheme,
+                  icon: Icons.hd_rounded,
+                  title: 'Video Quality',
+                  subtitle: controller.videoQuality.value,
+                  onTap: () => _showVideoQualityDialog(context),
+                ),
+              ).animate().fadeIn(duration: 200.ms);
+            }),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Text(
+                'When enabled, music videos play for YouTube songs with no ads. JioSaavn songs always play audio only. Video streaming uses more mobile data.',
+                style: TextStyle(
+                  color: colorScheme.onSurface.withAlpha(120),
+                  fontSize: 12,
+                ),
+              ),
+            ),
 
             const SizedBox(height: 24),
 
@@ -282,7 +325,7 @@ class SettingsScreen extends GetView<SettingsController> {
                         child: InkWell(
                           borderRadius: BorderRadius.circular(12),
                           onTap: () {
-                            controller.setRegion(region.code);
+                            controller.setRegionCode(region.code);
                             Get.back();
                           },
                           child: AnimatedContainer(
@@ -323,6 +366,67 @@ class SettingsScreen extends GetView<SettingsController> {
                 )),
               ),
               const SizedBox(height: 8),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSettingsSwitchTile({
+    required ColorScheme colorScheme,
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return Material(
+      color: colorScheme.surfaceContainerHighest,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: () => onChanged(!value),
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: colorScheme.primary.withAlpha(30),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: colorScheme.primary, size: 22),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        color: colorScheme.onSurface.withAlpha(150),
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Switch(
+                value: value,
+                onChanged: onChanged,
+                activeColor: colorScheme.primary,
+              ),
             ],
           ),
         ),
@@ -498,6 +602,97 @@ class SettingsScreen extends GetView<SettingsController> {
         ],
       ),
     );
+  }
+
+  void _showVideoQualityDialog(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: colorScheme.surface,
+        title: const Text('Choose Video Quality'),
+        content: Obx(() => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildQualityOption(
+              colorScheme: colorScheme,
+              title: 'Auto',
+              subtitle: 'Best available quality',
+              quality: 'Auto',
+              selected: controller.videoQuality.value == 'Auto',
+              onTap: () => controller.setVideoQuality('Auto'),
+            ),
+            const SizedBox(height: 8),
+            _buildQualityOption(
+              colorScheme: colorScheme,
+              title: '1080p',
+              subtitle: 'Full HD',
+              quality: '1080p',
+              selected: controller.videoQuality.value == '1080p',
+              onTap: () => controller.setVideoQuality('1080p'),
+            ),
+            const SizedBox(height: 8),
+            _buildQualityOption(
+              colorScheme: colorScheme,
+              title: '720p',
+              subtitle: 'HD',
+              quality: '720p',
+              selected: controller.videoQuality.value == '720p',
+              onTap: () => controller.setVideoQuality('720p'),
+            ),
+            const SizedBox(height: 8),
+            _buildQualityOption(
+              colorScheme: colorScheme,
+              title: '480p',
+              subtitle: 'Standard Definition',
+              quality: '480p',
+              selected: controller.videoQuality.value == '480p',
+              onTap: () => controller.setVideoQuality('480p'),
+            ),
+            const SizedBox(height: 8),
+            _buildQualityOption(
+              colorScheme: colorScheme,
+              title: '360p',
+              subtitle: 'Data Saver',
+              quality: '360p',
+              selected: controller.videoQuality.value == '360p',
+              onTap: () => controller.setVideoQuality('360p'),
+            ),
+          ],
+        )),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text(
+              'Done',
+              style: TextStyle(color: colorScheme.primary),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDataWarning(BuildContext context) async {
+    final results = await Connectivity().checkConnectivity();
+    if (results.contains(ConnectivityResult.mobile)) {
+      Get.defaultDialog(
+        title: 'Data Usage Warning',
+        middleText: 'Music videos use significantly more mobile data than audio. Consider enabling Data Saver mode or using WiFi.',
+        textConfirm: 'Got it',
+        textCancel: 'Cancel',
+        confirmTextColor: Colors.white,
+        onConfirm: () {
+          controller.markDataWarningSeen();
+          Get.back();
+        },
+        onCancel: () {
+          controller.setVideoMode(false);
+        },
+      );
+    } else {
+      controller.markDataWarningSeen();
+    }
   }
 
   Widget _buildQualityOption({

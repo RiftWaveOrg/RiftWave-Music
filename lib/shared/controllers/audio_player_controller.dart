@@ -18,6 +18,7 @@ import 'package:riftwave_music/features/settings/controllers/settings_controller
 import 'package:riftwave_music/features/library/controllers/library_controller.dart';
 import 'package:riftwave_music/features/player/controllers/dynamic_color_controller.dart';
 import 'package:riftwave_music/core/services/recommendation_engine.dart';
+import 'package:riftwave_music/shared/controllers/video_player_controller.dart';
 
 class AudioPlayerController extends GetxController {
   late final RiftWaveAudioHandler _audioHandler;
@@ -140,10 +141,32 @@ class AudioPlayerController extends GetxController {
   Future<void> togglePlayPause() async {
     if (!hasSong.value) return;
     if (isPlaying.value) {
-      await _audioHandler.pause();
+      await pause();
     } else {
-      await _audioHandler.play();
+      await play();
     }
+  }
+
+  Future<void> play({bool forceInternal = false}) async {
+    if (!forceInternal && Get.isRegistered<VideoPlayerController>()) {
+      final vpc = Get.find<VideoPlayerController>();
+      if (vpc.isHandlingPlayback) {
+        await vpc.play();
+        return;
+      }
+    }
+    await _audioHandler.play();
+  }
+
+  Future<void> pause({bool forceInternal = false}) async {
+    if (!forceInternal && Get.isRegistered<VideoPlayerController>()) {
+      final vpc = Get.find<VideoPlayerController>();
+      if (vpc.isHandlingPlayback) {
+        await vpc.pause();
+        return;
+      }
+    }
+    await _audioHandler.pause();
   }
 
   Future<void> skipToNext() async {
@@ -177,6 +200,13 @@ class AudioPlayerController extends GetxController {
   }
 
   Future<void> seekTo(Duration position) async {
+    if (Get.isRegistered<VideoPlayerController>()) {
+      final vpc = Get.find<VideoPlayerController>();
+      if (vpc.isHandlingPlayback) {
+        await vpc.seek(position);
+        return;
+      }
+    }
     await _audioHandler.seek(position);
   }
 
@@ -408,9 +438,15 @@ class AudioPlayerController extends GetxController {
         artUri: activeSong.thumbnailUrl.isNotEmpty ? Uri.parse(activeSong.thumbnailUrl) : null,
       );
 
-      await _audioHandler.setMediaItemAndPlay(mediaItem, streamUrl);
+      final isVideoMode = Get.isRegistered<SettingsController>() && Get.find<SettingsController>().videoModeEnabled.value;
+      if (isVideoMode && activeSong.source == MusicSource.youtube) {
+        await _audioHandler.setMediaItemOnly(mediaItem, streamUrl);
+        debugPrint('AudioPlayerController: Primary source loaded (Video Mode, playback deferred until video loads)');
+      } else {
+        await _audioHandler.setMediaItemAndPlay(mediaItem, streamUrl);
+        debugPrint('AudioPlayerController: Primary source loaded and playing successfully!');
+      }
       success = true;
-      debugPrint('AudioPlayerController: Primary source loaded and playing successfully!');
     } catch (e) {
       debugPrint('AudioPlayerController: Primary source failed: $e. Initiating fallback search...');
     }
@@ -480,9 +516,15 @@ class AudioPlayerController extends GetxController {
               artUri: matchedSong.thumbnailUrl.isNotEmpty ? Uri.parse(matchedSong.thumbnailUrl) : null,
             );
 
-            await _audioHandler.setMediaItemAndPlay(mediaItem, streamUrl);
+            final isVideoMode = Get.isRegistered<SettingsController>() && Get.find<SettingsController>().videoModeEnabled.value;
+            if (isVideoMode && activeSong.source == MusicSource.youtube) {
+              await _audioHandler.setMediaItemOnly(mediaItem, streamUrl);
+              debugPrint('AudioPlayerController: YouTube fallback loaded (Video Mode, playback deferred)');
+            } else {
+              await _audioHandler.setMediaItemAndPlay(mediaItem, streamUrl);
+              debugPrint('AudioPlayerController: YouTube fallback loaded and playing successfully!');
+            }
             success = true;
-            debugPrint('AudioPlayerController: YouTube fallback loaded and playing successfully!');
           } else {
             throw Exception('No precise YouTube fallback matches found.');
           }
@@ -780,7 +822,7 @@ class AudioPlayerController extends GetxController {
     if (origWords.isEmpty || candWords.isEmpty) return false;
     
     final overlap = origWords.intersection(candWords).length;
-    // Aggressively filter out songs that have 50%+ matching core words (titles)
+    
     if (overlap >= origWords.length * 0.5 || overlap >= candWords.length * 0.5) return true;
     
     return false;

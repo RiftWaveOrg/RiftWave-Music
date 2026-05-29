@@ -65,7 +65,7 @@ class HomeScreen extends GetView<HomeController> {
               ),
               Obx(() {
                 final library = Get.find<LibraryController>();
-                // Force Obx registration
+                
                 library.history.length;
                 
                 if (library.history.isEmpty) {

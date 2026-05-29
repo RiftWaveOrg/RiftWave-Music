@@ -80,7 +80,7 @@ class LibraryController extends GetxController {
     history.assignAll(songs);
   }
 
-  // --- LIKED SONGS ---
+  
 
   bool isLiked(String songId) => _likedBox.containsKey(songId);
 
@@ -97,7 +97,7 @@ class LibraryController extends GetxController {
     }
   }
 
-  // --- PLAYLISTS ---
+  
 
   Future<void> createPlaylist(String name, {String description = ''}) async {
     if (!isInitialized.value || name.trim().isEmpty) return;
@@ -120,9 +120,9 @@ class LibraryController extends GetxController {
       if (!playlist.songIds.contains(song.id)) {
         playlist.songIds.add(song.id);
         playlist.updatedAt = DateTime.now();
-        // Just store the song metadata in a general cache or history box so it can be retrieved?
-        // Actually, custom playlists store songIds. We need the song models!
-        // The prompt says we store songIds. Let's make sure we save the song in historySongsBox so it's retrievable.
+        
+        
+        
         await _historySongsBox.put(song.id, song.copyWith());
         await playlist.save();
         
@@ -162,7 +162,7 @@ class LibraryController extends GetxController {
   List<SongModel> getSongsForPlaylist(PlaylistModel playlist) {
     final List<SongModel> songs = [];
     for (final id in playlist.songIds) {
-      final song = _historySongsBox.get(id); // Use history box as a general song cache
+      final song = _historySongsBox.get(id); 
       if (song != null) songs.add(song);
     }
     return songs;
@@ -180,7 +180,7 @@ class LibraryController extends GetxController {
     }
   }
 
-  // --- HISTORY ---
+  
 
   Future<void> addToHistory(SongModel song) async {
     if (!isInitialized.value) {
@@ -192,7 +192,7 @@ class LibraryController extends GetxController {
       debugPrint('LibraryController: Attempting to add ${song.id} to history');
       await _historySongsBox.put(song.id, song.copyWith());
 
-      // Skip duplicate if within last 5 minutes
+      
       if (history.isNotEmpty && history.first.id == song.id) {
         final lastEntry = _historyBox.values.toList()
           ..sort((a, b) => b.playedAt.compareTo(a.playedAt));
@@ -221,10 +221,10 @@ class LibraryController extends GetxController {
       
       debugPrint('LibraryController: HistoryModel added to _historyBox. Total items: ${_historyBox.length}');
 
-      // Enforce 200 limit
+      
       if (_historyBox.length > 200) {
         final allEntries = _historyBox.values.toList()
-          ..sort((a, b) => a.playedAt.compareTo(b.playedAt)); // oldest first
+          ..sort((a, b) => a.playedAt.compareTo(b.playedAt)); 
         final toDelete = allEntries.take(_historyBox.length - 200);
         for (final entry in toDelete) {
           await entry.delete();
@@ -254,7 +254,7 @@ class LibraryController extends GetxController {
     history.removeWhere((s) => s.id == songId);
   }
 
-  // --- DOWNLOADS (Integration with DownloadController) ---
+  
 
   Future<void> addDownloadedSong(SongModel song) async {
     await _downloadsBox.put(song.id, song.copyWith());
@@ -269,6 +269,6 @@ class LibraryController extends GetxController {
   Future<void> removeDownloadedSong(String songId) async {
     await _downloadsBox.delete(songId);
     downloadedSongs.removeWhere((s) => s.id == songId);
-    // Also remove file via IO (handled in DownloadController)
+    
   }
 }
