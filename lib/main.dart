@@ -45,10 +45,10 @@ void main() async {
     builder: () => RiftWaveAudioHandler(),
     config: const AudioServiceConfig(
       androidNotificationChannelId: 'com.riftwavemusic.app.channel.audio',
-      androidNotificationChannelName: 'RiftWave',
+      androidNotificationChannelName: 'RiftWave Music',
       androidNotificationOngoing: true,
       androidStopForegroundOnPause: true,
-      androidNotificationIcon: 'mipmap/ic_launcher',
+      androidNotificationIcon: 'drawable/ic_notification',
       androidNotificationClickStartsActivity: true,
       fastForwardInterval: Duration(seconds: 10),
       rewindInterval: Duration(seconds: 10),

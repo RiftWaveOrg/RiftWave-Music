@@ -126,6 +126,18 @@ class SettingsScreen extends GetView<SettingsController> {
 
             const SizedBox(height: 24),
 
+            _buildSectionTitle(theme, 'Advanced'),
+            const SizedBox(height: 12),
+            _buildSettingsTile(
+              colorScheme: colorScheme,
+              icon: Icons.battery_charging_full_rounded,
+              title: 'Background Activity',
+              subtitle: 'Allow app to run in background without restrictions',
+              onTap: () => controller.requestBackgroundActivity(),
+            ).animate().fadeIn(duration: 400.ms, delay: 290.ms),
+
+            const SizedBox(height: 24),
+
             _buildSectionTitle(theme, 'About'),
             const SizedBox(height: 12),
             _buildSettingsTile(
@@ -152,6 +164,24 @@ class SettingsScreen extends GetView<SettingsController> {
               onTap: () {},
             ).animate().fadeIn(duration: 400.ms, delay: 400.ms),
 
+            const SizedBox(height: 48),
+            Center(
+              child: Column(
+                children: [
+                  Image.asset('assets/images/logo.png', width: 64, height: 64),
+                  const SizedBox(height: 12),
+                  Text(
+                    'RiftWave',
+                    style: TextStyle(
+                      color: colorScheme.onSurface.withAlpha(150),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ],
+              ).animate().fadeIn(duration: 800.ms, delay: 500.ms),
+            ),
             const SizedBox(height: 100),
           ],
         ),

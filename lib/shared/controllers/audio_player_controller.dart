@@ -4,9 +4,11 @@ import 'dart:math';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:just_audio/just_audio.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import 'package:riftwave_music/core/audio/audio_handler.dart';
 import 'package:riftwave_music/core/audio/repeat_mode.dart';
@@ -61,8 +63,11 @@ class AudioPlayerController extends GetxController {
     super.onInit();
     _audioHandler = Get.find<RiftWaveAudioHandler>();
     _audioHandler.onPlaybackCompleted = _onTrackCompleted;
+    _audioHandler.onSkipToNextCallback = () => skipToNext();
+    _audioHandler.onSkipToPreviousCallback = () => skipToPrevious();
     _listenToStreams();
     _restoreQueue();
+    _requestNotificationPermission();
 
     ever<SongModel?>(currentSong, (song) {
       if (song != null && song.thumbnailUrl.isNotEmpty && song.thumbnailUrl != _lastColorUrl) {
@@ -76,6 +81,74 @@ class AudioPlayerController extends GetxController {
         _refreshUpNextSuggestions(song);
       }
     });
+  }
+
+  Future<void> _requestNotificationPermission() async {
+    if (!Platform.isAndroid) return;
+    try {
+      final status = await Permission.notification.status;
+      if (status.isDenied) {
+        await Future.delayed(const Duration(seconds: 2));
+        if (Get.context != null) {
+          final theme = Theme.of(Get.context!);
+          final colorScheme = theme.colorScheme;
+          
+          final shouldRequest = await showDialog<bool>(
+            context: Get.context!,
+            builder: (context) => AlertDialog(
+              backgroundColor: colorScheme.surface,
+              surfaceTintColor: Colors.transparent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+              icon: Icon(Icons.notifications_active_rounded, size: 48, color: colorScheme.primary),
+              title: Text(
+                'Enable Notifications',
+                style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface),
+                textAlign: TextAlign.center,
+              ),
+              content: Text(
+                'RiftWave needs notification permission to show playback controls on your lock screen, status bar, and Dynamic Island.',
+                style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface.withAlpha(180)),
+                textAlign: TextAlign.center,
+              ),
+              actionsAlignment: MainAxisAlignment.spaceEvenly,
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: Text('Not Now', style: TextStyle(color: colorScheme.onSurface.withAlpha(150))),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: colorScheme.primary,
+                    foregroundColor: colorScheme.onPrimary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Allow'),
+                ),
+              ],
+            ),
+          );
+          if (shouldRequest == true) {
+            final result = await Permission.notification.request();
+            debugPrint('AudioPlayerController: Notification permission result: $result');
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('AudioPlayerController: Failed to request notification permission: $e');
+    }
+  }
+
+  Uri? _getHighResArtUri(SongModel song) {
+    if (song.thumbnailUrl.isEmpty) return null;
+    String artUrl = song.thumbnailUrl;
+    if (song.source == MusicSource.youtube) {
+      final videoId = song.sourceId.isNotEmpty ? song.sourceId : song.id;
+      artUrl = YouTubeApi.getMaxResThumbnail(videoId);
+    } else if (song.source == MusicSource.saavn) {
+      artUrl = artUrl.replaceAll('150x150', '500x500').replaceAll('50x50', '500x500');
+    }
+    return Uri.tryParse(artUrl);
   }
 
   @override
@@ -409,7 +482,7 @@ class AudioPlayerController extends GetxController {
           artist: activeSong.artist,
           album: activeSong.album,
           duration: Duration(milliseconds: activeSong.durationMs),
-          artUri: activeSong.thumbnailUrl.isNotEmpty ? Uri.parse(activeSong.thumbnailUrl) : null,
+          artUri: _getHighResArtUri(activeSong),
         );
         await _audioHandler.setMediaItemAndPlay(mediaItem, streamUrl);
         success = true;
@@ -435,7 +508,7 @@ class AudioPlayerController extends GetxController {
         artist: activeSong.artist,
         album: activeSong.album,
         duration: Duration(milliseconds: activeSong.durationMs),
-        artUri: activeSong.thumbnailUrl.isNotEmpty ? Uri.parse(activeSong.thumbnailUrl) : null,
+        artUri: _getHighResArtUri(activeSong),
       );
 
       final isVideoMode = Get.isRegistered<SettingsController>() && Get.find<SettingsController>().videoModeEnabled.value;
@@ -479,7 +552,7 @@ class AudioPlayerController extends GetxController {
               artist: matchedSong.artist,
               album: matchedSong.album,
               duration: Duration(milliseconds: matchedSong.durationMs),
-              artUri: matchedSong.thumbnailUrl.isNotEmpty ? Uri.parse(matchedSong.thumbnailUrl) : null,
+              artUri: _getHighResArtUri(matchedSong),
             );
 
             await _audioHandler.setMediaItemAndPlay(mediaItem, streamUrl);
@@ -513,7 +586,7 @@ class AudioPlayerController extends GetxController {
               artist: matchedSong.artist,
               album: matchedSong.album,
               duration: Duration(milliseconds: matchedSong.durationMs),
-              artUri: matchedSong.thumbnailUrl.isNotEmpty ? Uri.parse(matchedSong.thumbnailUrl) : null,
+              artUri: _getHighResArtUri(matchedSong),
             );
 
             final isVideoMode = Get.isRegistered<SettingsController>() && Get.find<SettingsController>().videoModeEnabled.value;

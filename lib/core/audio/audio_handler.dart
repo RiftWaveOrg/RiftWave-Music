@@ -11,8 +11,11 @@ class RiftWaveAudioHandler extends BaseAudioHandler with SeekHandler {
   late final StreamSubscription<PlayerState> _playerStateSub;
   late final StreamSubscription<Duration?> _durationSub;
   late final StreamSubscription<int?> _currentIndexSub;
+  Timer? _positionTimer;
 
   void Function()? onPlaybackCompleted;
+  void Function()? onSkipToNextCallback;
+  void Function()? onSkipToPreviousCallback;
 
   AudioPlayer get player => _player;
   Stream<Duration> get positionStream => _player.positionStream;
@@ -21,13 +24,14 @@ class RiftWaveAudioHandler extends BaseAudioHandler with SeekHandler {
   Stream<PlayerState> get playerStateStream => _player.playerStateStream;
 
   RiftWaveAudioHandler() {
-
-    _playerStateSub = _player.playerStateStream.listen(_broadcastPlaybackState);
+    _playerStateSub = _player.playerStateStream.listen((state) {
+      _broadcastPlaybackState(state);
+      _managePositionTimer(state.playing);
+    });
 
     _durationSub = _player.durationStream.listen((duration) {
       final currentItem = mediaItem.valueOrNull;
       if (currentItem != null && duration != null) {
-
         mediaItem.add(currentItem.copyWith(duration: duration));
       }
     });
@@ -38,6 +42,15 @@ class RiftWaveAudioHandler extends BaseAudioHandler with SeekHandler {
         onPlaybackCompleted?.call();
       }
     });
+  }
+
+  void _managePositionTimer(bool isPlaying) {
+    _positionTimer?.cancel();
+    if (isPlaying) {
+      _positionTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+        _broadcastPlaybackState(_player.playerState);
+      });
+    }
   }
 
   Future<void> setMediaItemOnly(MediaItem item, String audioUrl) async {
@@ -73,6 +86,7 @@ class RiftWaveAudioHandler extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> stop() async {
+    _positionTimer?.cancel();
     await _player.stop();
     await super.stop();
   }
@@ -84,12 +98,12 @@ class RiftWaveAudioHandler extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> skipToNext() async {
-
+    onSkipToNextCallback?.call();
   }
 
   @override
   Future<void> skipToPrevious() async {
-
+    onSkipToPreviousCallback?.call();
   }
 
   @override
@@ -122,16 +136,21 @@ class RiftWaveAudioHandler extends BaseAudioHandler with SeekHandler {
       MediaControl.skipToPrevious,
       if (isPlaying) MediaControl.pause else MediaControl.play,
       MediaControl.skipToNext,
-      MediaControl.stop,
     ];
 
     playbackState.add(PlaybackState(
       controls: controls,
-
       systemActions: const {
+        MediaAction.play,
+        MediaAction.pause,
+        MediaAction.stop,
         MediaAction.seek,
         MediaAction.seekForward,
         MediaAction.seekBackward,
+        MediaAction.skipToNext,
+        MediaAction.skipToPrevious,
+        MediaAction.setRepeatMode,
+        MediaAction.setShuffleMode,
       },
       androidCompactActionIndices: const [0, 1, 2],
       processingState: audioProcessingState,
@@ -144,6 +163,7 @@ class RiftWaveAudioHandler extends BaseAudioHandler with SeekHandler {
   }
 
   Future<void> dispose() async {
+    _positionTimer?.cancel();
     await _playerStateSub.cancel();
     await _durationSub.cancel();
     await _currentIndexSub.cancel();

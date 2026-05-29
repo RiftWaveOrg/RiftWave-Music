@@ -204,4 +204,11 @@ class YouTubeApi extends GetxService {
       throw ParseException('YouTube Playlists Error: ${e.toString()}');
     }
   }
+  static String getMaxResThumbnail(String videoId) {
+    return 'https://img.youtube.com/vi/$videoId/maxresdefault.jpg';
+  }
+
+  static String getHqThumbnail(String videoId) {
+    return 'https://img.youtube.com/vi/$videoId/hqdefault.jpg';
+  }
 }
