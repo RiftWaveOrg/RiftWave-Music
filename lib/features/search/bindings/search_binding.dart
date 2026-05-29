@@ -4,6 +4,6 @@ import 'package:riftwave_music/features/search/controllers/search_controller.dar
 class SearchBinding extends Bindings {
   @override
   void dependencies() {
-    Get.lazyPut<RiftSearchController>(() => RiftSearchController());
+    Get.lazyPut<MusicSearchController>(() => MusicSearchController());
   }
 }
