@@ -12,6 +12,8 @@ import 'package:riftwave_music/core/audio/repeat_mode.dart';
 import 'package:riftwave_music/core/database/models/song_model.dart';
 import 'package:riftwave_music/core/api/youtube_api.dart';
 import 'package:riftwave_music/core/api/saavn_api.dart';
+import 'package:riftwave_music/core/api/lastfm_api.dart';
+import 'package:riftwave_music/features/player/controllers/dynamic_color_controller.dart';
 
 class AudioPlayerController extends GetxController {
   late final RiftWaveAudioHandler _audioHandler;
@@ -34,8 +36,13 @@ class AudioPlayerController extends GetxController {
 
   final RxString errorMessage = ''.obs;
 
+  final Rx<Duration?> sleepTimerRemaining = Rx<Duration?>(null);
+  Timer? _sleepTimer;
+  final RxDouble volume = 1.0.obs;
+
   List<int> _shuffledIndices = [];
   int _shufflePosition = 0;
+  String _lastColorUrl = '';
 
   final List<StreamSubscription> _subscriptions = [];
 
@@ -48,6 +55,15 @@ class AudioPlayerController extends GetxController {
     _audioHandler.onPlaybackCompleted = _onTrackCompleted;
     _listenToStreams();
     _restoreQueue();
+
+    ever<SongModel?>(currentSong, (song) {
+      if (song != null && song.thumbnailUrl.isNotEmpty && song.thumbnailUrl != _lastColorUrl) {
+        _lastColorUrl = song.thumbnailUrl;
+        if (Get.isRegistered<DynamicColorController>()) {
+          Get.find<DynamicColorController>().extractFromImageUrl(song.thumbnailUrl);
+        }
+      }
+    });
   }
 
   @override
@@ -55,6 +71,7 @@ class AudioPlayerController extends GetxController {
     for (final sub in _subscriptions) {
       sub.cancel();
     }
+    _sleepTimer?.cancel();
     super.onClose();
   }
 
@@ -270,13 +287,69 @@ class AudioPlayerController extends GetxController {
 
   Future<void> _loadAndPlay(SongModel song) async {
     errorMessage.value = '';
+    try {
+      await _audioHandler.stop();
+    } catch (_) {}
     currentSong.value = song;
     hasSong.value = true;
+
+    // Trigger autoplay recommendations in the background if the queue is running low (< 5 songs remaining)
+    final remainingInQueue = queue.length - 1 - currentQueueIndex.value;
+    if (remainingInQueue < 5) {
+      _fetchAndAppendSimilar(song);
+    }
 
     currentPosition.value = Duration.zero;
     totalDuration.value = Duration(milliseconds: song.durationMs);
 
     SongModel activeSong = song;
+
+    // Resolve sourceId if empty (e.g. for Last.fm recommendations)
+    if (activeSong.sourceId.isEmpty) {
+      debugPrint('AudioPlayerController: Song sourceId is empty. Resolving via search for: ${activeSong.title} - ${activeSong.artist}');
+      try {
+        if (activeSong.source == MusicSource.youtube) {
+          final searchResults = await Get.find<YouTubeApi>().search('${activeSong.title} ${activeSong.artist}');
+          if (searchResults.isNotEmpty) {
+            final matched = searchResults.first;
+            activeSong = activeSong.copyWith(
+              sourceId: matched.sourceId,
+              durationMs: matched.durationMs > 0 ? matched.durationMs : activeSong.durationMs,
+              thumbnailUrl: (activeSong.thumbnailUrl.isEmpty || activeSong.thumbnailUrl.contains('2a96cbd8b46e442fc41c2b86b821562f'))
+                  ? matched.thumbnailUrl
+                  : activeSong.thumbnailUrl,
+            );
+            final idx = queue.indexWhere((s) => s.id == song.id);
+            if (idx != -1) {
+              queue[idx] = activeSong;
+            }
+            currentSong.value = activeSong;
+            totalDuration.value = Duration(milliseconds: activeSong.durationMs);
+          }
+        } else {
+          final searchResults = await Get.find<SaavnApi>().searchSongs('${activeSong.title} ${activeSong.artist}');
+          if (searchResults.isNotEmpty) {
+            final matched = searchResults.first;
+            activeSong = activeSong.copyWith(
+              sourceId: matched.sourceId,
+              durationMs: matched.durationMs > 0 ? matched.durationMs : activeSong.durationMs,
+              thumbnailUrl: (activeSong.thumbnailUrl.isEmpty || activeSong.thumbnailUrl.contains('2a96cbd8b46e442fc41c2b86b821562f'))
+                  ? matched.thumbnailUrl
+                  : activeSong.thumbnailUrl,
+            );
+            final idx = queue.indexWhere((s) => s.id == song.id);
+            if (idx != -1) {
+              queue[idx] = activeSong;
+            }
+            currentSong.value = activeSong;
+            totalDuration.value = Duration(milliseconds: activeSong.durationMs);
+          }
+        }
+      } catch (e) {
+        debugPrint('AudioPlayerController: Failed to pre-resolve empty sourceId: $e');
+      }
+    }
+
     String streamUrl = '';
     bool success = false;
 
@@ -468,6 +541,41 @@ class AudioPlayerController extends GetxController {
     errorMessage.value = '';
   }
 
+  Future<void> setVolume(double val) async {
+    volume.value = val.clamp(0.0, 1.0);
+    await _audioHandler.setVolume(val.clamp(0.0, 1.0));
+  }
+
+  void setSleepTimer(Duration duration) {
+    cancelSleepTimer();
+    sleepTimerRemaining.value = duration;
+    _sleepTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      final remaining = sleepTimerRemaining.value;
+      if (remaining == null || remaining.inSeconds <= 0) {
+        cancelSleepTimer();
+        _audioHandler.pause();
+        return;
+      }
+      sleepTimerRemaining.value = remaining - const Duration(seconds: 1);
+    });
+  }
+
+  void setSleepTimerEndOfTrack() {
+    cancelSleepTimer();
+    sleepTimerRemaining.value = const Duration(seconds: -1);
+    _audioHandler.onPlaybackCompleted = () {
+      _audioHandler.pause();
+      sleepTimerRemaining.value = null;
+      _audioHandler.onPlaybackCompleted = _onTrackCompleted;
+    };
+  }
+
+  void cancelSleepTimer() {
+    _sleepTimer?.cancel();
+    _sleepTimer = null;
+    sleepTimerRemaining.value = null;
+  }
+
   Future<void> _persistQueue() async {
     try {
       final box = await Hive.openBox(_queueBoxName);
@@ -589,5 +697,169 @@ class AudioPlayerController extends GetxController {
     }
 
     return titleMatch && artistMatch;
+  }
+
+  Future<void> _fetchAndAppendSimilar(SongModel song) async {
+    try {
+      final primaryArtist = _getPrimaryArtist(song.artist);
+      final cleanedTitle = _getCleanedTitle(song.title, song.artist);
+      final saavn = Get.find<SaavnApi>();
+      final yt = Get.find<YouTubeApi>();
+
+      List<SongModel> similar = [];
+
+      // Try 1: Last.fm similar tracks (Musically similar tracks, mapped to original source)
+      try {
+        final lastfm = Get.find<LastFmApi>();
+        debugPrint('AudioPlayerController: Fetching similar songs for cleanedTitle="$cleanedTitle", artist="$primaryArtist"');
+        final songs = await lastfm.getSimilarSongs(primaryArtist, cleanedTitle);
+        similar = songs.map((s) => s.copyWith(source: song.source)).toList();
+      } catch (e) {
+        debugPrint('Autoplay Fallback 1 (Last.fm Similar) failed: $e');
+      }
+
+      if (song.source == MusicSource.youtube) {
+        // --- YOUTUBE SOURCE FLOW ---
+        
+        // Try 2: YouTube similar search for song radio/similar
+        if (similar.isEmpty) {
+          try {
+            final query = '$cleanedTitle $primaryArtist radio';
+            final ytResults = await yt.search(query);
+            similar = ytResults.where((s) => s.title.toLowerCase() != song.title.toLowerCase()).toList();
+          } catch (e) {
+            debugPrint('Autoplay Fallback 2 (YouTube Radio Search) failed: $e');
+          }
+        }
+
+        // Try 3: YouTube search by artist name
+        if (similar.isEmpty) {
+          try {
+            final ytResults = await yt.search('$primaryArtist songs');
+            similar = ytResults.where((s) => s.title.toLowerCase() != song.title.toLowerCase()).toList();
+          } catch (e) {
+            debugPrint('Autoplay Fallback 3 (YouTube Artist Search) failed: $e');
+          }
+        }
+
+        // Try 4: JioSaavn similar search as a backup (mapped to YouTube source)
+        if (similar.isEmpty) {
+          try {
+            final query = '$cleanedTitle $primaryArtist radio';
+            final searchResults = await saavn.searchSongs(query);
+            similar = searchResults
+                .where((s) => s.title.toLowerCase() != song.title.toLowerCase())
+                .map((s) => s.copyWith(source: MusicSource.youtube, sourceId: ''))
+                .toList();
+          } catch (e) {
+            debugPrint('Autoplay Fallback 4 (Saavn Radio Backup) failed: $e');
+          }
+        }
+      } else {
+        // --- SAAVN SOURCE FLOW ---
+        
+        // Try 2: Saavn similar search for song radio/similar
+        if (similar.isEmpty) {
+          try {
+            final query = '$cleanedTitle $primaryArtist radio';
+            final searchResults = await saavn.searchSongs(query);
+            similar = searchResults.where((s) => s.title.toLowerCase() != song.title.toLowerCase()).toList();
+          } catch (e) {
+            debugPrint('Autoplay Fallback 2 (Saavn Radio Search) failed: $e');
+          }
+        }
+
+        // Try 3: Saavn Artist Details
+        if (similar.isEmpty) {
+          try {
+            final artistId = await saavn.searchArtist(primaryArtist);
+            if (artistId != null) {
+              final songs = await saavn.getArtistSongs(artistId);
+              similar = songs.where((s) => s.title.toLowerCase() != song.title.toLowerCase()).toList();
+            }
+          } catch (e) {
+            debugPrint('Autoplay Fallback 3 (Saavn Artist Details) failed: $e');
+          }
+        }
+
+        // Try 4: YouTube similar search as a backup (mapped to Saavn source)
+        if (similar.isEmpty) {
+          try {
+            final query = '$cleanedTitle $primaryArtist radio';
+            final ytResults = await yt.search(query);
+            similar = ytResults
+                .where((s) => s.title.toLowerCase() != song.title.toLowerCase())
+                .map((s) => s.copyWith(source: MusicSource.saavn, sourceId: ''))
+                .toList();
+          } catch (e) {
+            debugPrint('Autoplay Fallback 4 (YouTube Radio Backup) failed: $e');
+          }
+        }
+      }
+
+      if (currentSong.value?.id == song.id && similar.isNotEmpty) {
+        final currentQueue = List<SongModel>.from(queue);
+        final existingIds = currentQueue.map((s) => s.id).toSet();
+        final newSongs = similar.where((s) => !existingIds.contains(s.id)).take(15);
+        queue.addAll(newSongs);
+        _persistQueue();
+      }
+    } catch (e) {
+      Get.log('Error fetching similar songs for autoplay: $e');
+    }
+  }
+
+  String _getCleanedTitle(String title, String artist) {
+    String cleaned = title.toLowerCase();
+    
+    // Strip artist name from title if it exists at the start
+    final cleanArtist = artist.toLowerCase().trim();
+    if (cleaned.startsWith(cleanArtist)) {
+      cleaned = cleaned.substring(cleanArtist.length).trim();
+      if (cleaned.startsWith('-') || cleaned.startsWith(':') || cleaned.startsWith('|')) {
+        cleaned = cleaned.substring(1).trim();
+      }
+    }
+    
+    // Remove brackets/parentheses and standard video clutter
+    cleaned = cleaned.replaceAll(RegExp(r'\(.*?\)'), '');
+    cleaned = cleaned.replaceAll(RegExp(r'\[.*?\]'), '');
+    cleaned = cleaned.replaceAll('official video', '');
+    cleaned = cleaned.replaceAll('official audio', '');
+    cleaned = cleaned.replaceAll('official music video', '');
+    cleaned = cleaned.replaceAll('lyrics', '');
+    cleaned = cleaned.replaceAll('lyric video', '');
+    cleaned = cleaned.replaceAll('full audio', '');
+    cleaned = cleaned.replaceAll('full video', '');
+    cleaned = cleaned.replaceAll('karaoke', '');
+    
+    // Remove symbols and extra whitespace
+    cleaned = cleaned.replaceAll(RegExp(r'[^\w\s]'), '').replaceAll(RegExp(r'\s+'), ' ').trim();
+    return cleaned;
+  }
+
+  String _getPrimaryArtist(String artist) {
+    if (artist.isEmpty) return '';
+    String cleaned = artist;
+    
+    // Clean YouTube specific suffixes like " - Topic" or VEVO
+    cleaned = cleaned.replaceAll(RegExp(r'\s*-\s*Topic$', caseSensitive: false), '');
+    cleaned = cleaned.replaceAll(RegExp(r'\s*VEVO$', caseSensitive: false), '');
+    
+    final dividers = [
+      RegExp(r'\bfeat\.?\b', caseSensitive: false),
+      RegExp(r'\bft\.?\b', caseSensitive: false),
+      '&',
+      ',',
+      'and',
+      'And'
+    ];
+    for (final divider in dividers) {
+      final parts = cleaned.split(divider);
+      if (parts.isNotEmpty) {
+        cleaned = parts[0];
+      }
+    }
+    return cleaned.trim();
   }
 }

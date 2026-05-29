@@ -1,5 +1,7 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:get/get.dart';
 import 'package:riftwave_music/core/api/exceptions/api_exceptions.dart';
 import 'package:riftwave_music/core/database/models/song_model.dart';
@@ -11,7 +13,8 @@ class LastFmApi extends GetxService {
     receiveTimeout: const Duration(seconds: 10),
   ));
 
-  late String _apiKey;
+  // Initialize to working fallback synchronously to prevent LateInitializationErrors.
+  String _apiKey = 'b6096b3e21b6fe47b25cfe964c00502b';
 
   @override
   void onInit() {
@@ -21,6 +24,29 @@ class LastFmApi extends GetxService {
 
   Future<void> _initApiKey() async {
     try {
+      // 1. Try checking compile-time environment definitions (e.g. --dart-define-from-file=.env)
+      const envKey = String.fromEnvironment('LASTFM_API_KEY');
+      if (envKey.isNotEmpty) {
+        _apiKey = envKey;
+        return;
+      }
+
+      // 2. Try loading from packaged .env asset via rootBundle
+      try {
+        final content = await rootBundle.loadString('.env');
+        final lines = content.split('\n');
+        for (final line in lines) {
+          final trimmed = line.trim();
+          if (trimmed.startsWith('#') || !trimmed.contains('=')) continue;
+          final parts = trimmed.split('=');
+          if (parts[0].trim() == 'LASTFM_API_KEY') {
+            _apiKey = parts.sublist(1).join('=').trim().replaceAll('"', '').replaceAll("'", "");
+            return;
+          }
+        }
+      } catch (_) {}
+
+      // 3. Try loading from local File (useful for desktop targets and test environments)
       final file = File('.env');
       if (await file.exists()) {
         final lines = await file.readAsLines();
@@ -35,11 +61,14 @@ class LastFmApi extends GetxService {
         }
       }
     } catch (_) {}
-    _apiKey = 'b25b959554ed76058ac2207b2b4b0e95';
   }
 
   Future<List<SongModel>> getSimilarSongs(String artist, String title) async {
     try {
+      final keyPreview = _apiKey.length > 8 
+          ? '${_apiKey.substring(0, 4)}...${_apiKey.substring(_apiKey.length - 4)}' 
+          : _apiKey;
+      debugPrint('LastFmApi.getSimilarSongs: querying artist="$artist", track="$title" with apiKey="$keyPreview"');
       final response = await _dio.get('', queryParameters: {
         'method': 'track.getsimilar',
         'artist': artist,
@@ -51,6 +80,7 @@ class LastFmApi extends GetxService {
 
       final data = response.data;
       if (data == null || data['similartracks'] == null) {
+        debugPrint('LastFmApi.getSimilarSongs: null or missing similartracks object');
         return [];
       }
 
@@ -67,6 +97,9 @@ class LastFmApi extends GetxService {
         final imgList = t['image'] as List<dynamic>?;
         if (imgList != null && imgList.isNotEmpty) {
           imgUrl = imgList.last['#text'] as String? ?? '';
+          if (imgUrl.contains('2a96cbd8b46e442fc41c2b86b821562f')) {
+            imgUrl = '';
+          }
         }
 
         final durVal = t['duration'];
@@ -85,10 +118,13 @@ class LastFmApi extends GetxService {
         ));
       }
 
+      debugPrint('LastFmApi.getSimilarSongs: successfully retrieved ${songs.length} similar tracks');
       return songs;
     } on DioException catch (e) {
+      debugPrint('LastFmApi.getSimilarSongs DioException: status=${e.response?.statusCode}, message=${e.message}, data=${e.response?.data}');
       _handleDioError(e);
     } catch (e) {
+      debugPrint('LastFmApi.getSimilarSongs standard Exception: $e');
       if (e is ApiException) rethrow;
       throw ParseException('Last.fm Similar Songs Error: ${e.toString()}');
     }
@@ -96,6 +132,10 @@ class LastFmApi extends GetxService {
 
   Future<String> getArtistBio(String artist) async {
     try {
+      final keyPreview = _apiKey.length > 8 
+          ? '${_apiKey.substring(0, 4)}...${_apiKey.substring(_apiKey.length - 4)}' 
+          : _apiKey;
+      debugPrint('LastFmApi.getArtistBio: querying artist="$artist" with apiKey="$keyPreview"');
       final response = await _dio.get('', queryParameters: {
         'method': 'artist.getinfo',
         'artist': artist,
@@ -105,18 +145,25 @@ class LastFmApi extends GetxService {
 
       final data = response.data;
       if (data == null || data['artist'] == null) {
+        debugPrint('LastFmApi.getArtistBio: returned null or missing artist object');
         return '';
       }
 
       final bio = data['artist']['bio'];
-      if (bio == null) return '';
+      if (bio == null) {
+        debugPrint('LastFmApi.getArtistBio: returned missing bio object');
+        return '';
+      }
 
       final String content = bio['content'] as String? ?? bio['summary'] as String? ?? '';
+      debugPrint('LastFmApi.getArtistBio: successfully fetched bio, length=${content.length}');
 
       return content.replaceAll(RegExp(r'<[^>]*>|Read more on Last.fm.*'), '').trim();
     } on DioException catch (e) {
+      debugPrint('LastFmApi.getArtistBio DioException: status=${e.response?.statusCode}, message=${e.message}, data=${e.response?.data}');
       _handleDioError(e);
     } catch (e) {
+      debugPrint('LastFmApi.getArtistBio standard Exception: $e');
       if (e is ApiException) rethrow;
       throw ParseException('Last.fm Biography Error: ${e.toString()}');
     }
