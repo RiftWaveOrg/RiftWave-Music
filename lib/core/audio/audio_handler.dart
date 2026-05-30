@@ -8,12 +8,16 @@ class RiftWaveAudioHandler extends BaseAudioHandler with SeekHandler {
     userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   );
 
+  final ConcatenatingAudioSource _playlist = ConcatenatingAudioSource(children: []);
+  final List<MediaItem> _mediaItems = [];
+
   late final StreamSubscription<PlayerState> _playerStateSub;
   late final StreamSubscription<Duration?> _durationSub;
   late final StreamSubscription<int?> _currentIndexSub;
   Timer? _positionTimer;
 
   void Function()? onPlaybackCompleted;
+  void Function(int newIndex)? onIndexChanged;
   void Function()? onSkipToNextCallback;
   void Function()? onSkipToPreviousCallback;
 
@@ -24,6 +28,8 @@ class RiftWaveAudioHandler extends BaseAudioHandler with SeekHandler {
   Stream<PlayerState> get playerStateStream => _player.playerStateStream;
 
   RiftWaveAudioHandler() {
+    _player.setAudioSource(_playlist);
+
     _playerStateSub = _player.playerStateStream.listen((state) {
       _broadcastPlaybackState(state);
       _managePositionTimer(state.playing);
@@ -36,7 +42,13 @@ class RiftWaveAudioHandler extends BaseAudioHandler with SeekHandler {
       }
     });
 
-    _currentIndexSub = _player.currentIndexStream.listen((_) {});
+    _currentIndexSub = _player.currentIndexStream.listen((index) {
+      if (index != null && index < _mediaItems.length) {
+        mediaItem.add(_mediaItems[index]);
+        onIndexChanged?.call(index);
+      }
+    });
+
     _player.processingStateStream.listen((state) {
       if (state == ProcessingState.completed) {
         onPlaybackCompleted?.call();
@@ -54,10 +66,34 @@ class RiftWaveAudioHandler extends BaseAudioHandler with SeekHandler {
   }
 
   Future<void> setMediaItemOnly(MediaItem item, String audioUrl) async {
+    _mediaItems.clear();
+    _mediaItems.add(item);
     mediaItem.add(item);
-    debugPrint('RiftWaveAudioHandler: Loading audio URL only: $audioUrl');
+    
+    debugPrint('RiftWaveAudioHandler: Loading primary audio URL: $audioUrl');
+    
+    // Clear and add the first item
+    await _playlist.clear();
     final uri = Uri.parse(audioUrl);
-    await _player.setAudioSource(AudioSource.uri(uri));
+    await _playlist.add(AudioSource.uri(uri, tag: item));
+    
+    // EXPLICITLY seek to 0 to prevent just_audio from starting at the previous song's position
+    try {
+      await _player.seek(Duration.zero, index: 0);
+    } catch (_) {}
+  }
+
+  Future<void> preloadNextItem(MediaItem item, String audioUrl) async {
+    // Only add if it's not already in the playlist (prevent duplicates)
+    if (_mediaItems.any((m) => m.id == item.id)) {
+        return;
+    }
+
+    _mediaItems.add(item);
+    debugPrint('RiftWaveAudioHandler: Preloading next audio URL: $audioUrl');
+    
+    final uri = Uri.parse(audioUrl);
+    await _playlist.add(AudioSource.uri(uri, tag: item));
   }
 
   Future<void> setMediaItemAndPlay(MediaItem item, String audioUrl) async {
@@ -68,7 +104,8 @@ class RiftWaveAudioHandler extends BaseAudioHandler with SeekHandler {
   @override
   Future<void> prepareFromUri(Uri uri, [Map<String, dynamic>? extras]) async {
     try {
-      await _player.setAudioSource(AudioSource.uri(uri));
+      await _playlist.clear();
+      await _playlist.add(AudioSource.uri(uri));
     } catch (e) {
       debugPrint('RiftWaveAudioHandler: Failed to prepare audio — $e');
     }
@@ -98,12 +135,22 @@ class RiftWaveAudioHandler extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> skipToNext() async {
-    onSkipToNextCallback?.call();
+    if (_playlist.length > 1 && _player.currentIndex != null && _player.currentIndex! < _playlist.length - 1) {
+       // Let just_audio naturally skip to the preloaded next item
+       await _player.seekToNext();
+    } else {
+       // Fallback to app-level queue management
+       onSkipToNextCallback?.call();
+    }
   }
 
   @override
   Future<void> skipToPrevious() async {
-    onSkipToPreviousCallback?.call();
+    if (_player.position.inSeconds > 3) {
+      await _player.seek(Duration.zero);
+    } else {
+      onSkipToPreviousCallback?.call();
+    }
   }
 
   @override
@@ -158,7 +205,7 @@ class RiftWaveAudioHandler extends BaseAudioHandler with SeekHandler {
       updatePosition: _player.position,
       bufferedPosition: _player.bufferedPosition,
       speed: _player.speed,
-      queueIndex: 0,
+      queueIndex: _player.currentIndex ?? 0,
     ));
   }
 

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:riftwave_music/features/home/views/home_screen.dart';
 import 'package:riftwave_music/features/search/views/search_screen.dart';
+import 'package:riftwave_music/features/search/controllers/search_controller.dart';
 import 'package:riftwave_music/features/library/views/library_screen.dart';
 import 'package:riftwave_music/features/settings/views/settings_screen.dart';
 import 'package:riftwave_music/shared/widgets/mini_player.dart';
@@ -15,8 +17,28 @@ class MainNavigation extends StatelessWidget {
     final navController = Get.put(MainNavController());
     final colorScheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      body: Obx(() => IndexedStack(
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (didPop) return;
+
+        if (navController.currentIndex.value == 1 && Get.isRegistered<MusicSearchController>()) {
+          final searchController = Get.find<MusicSearchController>();
+          if (searchController.query.value.isNotEmpty) {
+            searchController.clearSearch();
+            FocusScope.of(context).unfocus();
+            return;
+          }
+        }
+
+        if (navController.currentIndex.value != 0) {
+          navController.changeTab(0);
+        } else {
+          SystemNavigator.pop();
+        }
+      },
+      child: Scaffold(
+        body: Obx(() => IndexedStack(
         index: navController.currentIndex.value,
         children: const [
           HomeScreen(),
@@ -83,7 +105,7 @@ class MainNavigation extends StatelessWidget {
           ).animate().fadeIn(duration: 500.ms)),
         ],
       ),
-    );
+    ));
   }
 }
 

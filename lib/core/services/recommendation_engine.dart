@@ -166,6 +166,23 @@ class RecommendationEngine extends GetxService {
 
   Future<List<SongModel>> getSimilarToNowPlaying(SongModel song) async {
     final results = <SongModel>[];
+    
+    if (song.source == MusicSource.youtube) {
+      try {
+        final yt = Get.find<YouTubeApi>();
+        final related = await yt.getRelatedSongs(song.sourceId.isNotEmpty ? song.sourceId : song.id);
+        debugPrint('RecommendationEngine: YouTube getRelatedSongs returned ${related.length} songs');
+        results.addAll(related);
+      } catch (e) {
+        debugPrint('RecommendationEngine: YouTube getRelatedSongs failed: $e');
+      }
+      
+      if (results.isNotEmpty) {
+        debugPrint('RecommendationEngine: Returning YouTube related songs');
+        return results.take(20).toList();
+      }
+    }
+
     final cleanTitle = _cleanTitle(song.title, song.artist);
     final primaryArtist = _primaryArtist(song.artist);
 
@@ -203,7 +220,7 @@ class RecommendationEngine extends GetxService {
       }
     }
 
-    return results.take(10).toList();
+    return results.take(15).toList();
   }
 
   Future<List<SongModel>> _getHistoryBasedSuggestions(

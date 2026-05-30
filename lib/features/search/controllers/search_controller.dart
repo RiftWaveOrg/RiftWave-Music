@@ -18,8 +18,10 @@ class MusicSearchController extends GetxController {
   final RxList<Map<String, dynamic>> artistResults = <Map<String, dynamic>>[].obs;
   final RxList<Map<String, dynamic>> albumResults = <Map<String, dynamic>>[].obs;
   final RxList<Map<String, dynamic>> playlistResults = <Map<String, dynamic>>[].obs;
+  final RxList<String> searchSuggestions = <String>[].obs;
 
   final RxList<String> recentSearches = <String>[].obs;
+  final RxBool hasPerformedSearch = false.obs;
 
   final RxString activeFilter = 'YouTube'.obs;
 
@@ -32,7 +34,7 @@ class MusicSearchController extends GetxController {
     textController = TextEditingController();
     _initHive();
 
-    debounce(query, _performSearch, time: const Duration(milliseconds: 300));
+    debounce(query, _fetchSuggestions, time: const Duration(milliseconds: 300));
   }
 
   Future<void> _initHive() async {
@@ -52,6 +54,7 @@ class MusicSearchController extends GetxController {
       textController.text = value;
     }
     query.value = value;
+    hasPerformedSearch.value = false;
   }
 
   void removeRecentSearch(String term) {
@@ -64,7 +67,17 @@ class MusicSearchController extends GetxController {
     _recentBox?.put('searches', []);
   }
 
-  Future<void> _performSearch(String value) async {
+  Future<void> _fetchSuggestions(String value) async {
+    if (value.trim().isEmpty || hasPerformedSearch.value) {
+      searchSuggestions.clear();
+      return;
+    }
+    final ytApi = Get.find<YouTubeApi>();
+    final suggestions = await ytApi.getSearchSuggestions(value);
+    searchSuggestions.assignAll(suggestions);
+  }
+
+  Future<void> performSearch(String value) async {
     if (value.trim().isEmpty) {
       songResults.clear();
       artistResults.clear();
@@ -83,6 +96,8 @@ class MusicSearchController extends GetxController {
 
     isSearching.value = true;
     errorMessage.value = '';
+    hasPerformedSearch.value = true;
+    searchSuggestions.clear();
 
     try {
       final ytApi = Get.find<YouTubeApi>();
@@ -135,7 +150,9 @@ class MusicSearchController extends GetxController {
     artistResults.clear();
     albumResults.clear();
     playlistResults.clear();
+    searchSuggestions.clear();
     isSearching.value = false;
+    hasPerformedSearch.value = false;
     errorMessage.value = '';
   }
 

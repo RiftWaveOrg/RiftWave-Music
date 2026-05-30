@@ -247,13 +247,6 @@ class UpdateController extends GetxController {
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              skipVersion(latestVersion.value);
-              Get.back();
-            },
-            child: Text('Skip', style: TextStyle(color: colorScheme.onSurface.withAlpha(150))),
-          ),
-          TextButton(
             onPressed: () => Get.back(),
             child: Text('Later', style: TextStyle(color: colorScheme.onSurface.withAlpha(150))),
           ),

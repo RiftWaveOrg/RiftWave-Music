@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 class WavySeekBar extends StatefulWidget {
   final Duration position;
   final Duration duration;
+  final Duration? audioBuffered;
+  final Duration? videoBuffered;
   final ValueChanged<Duration> onChanged;
   final Color activeColor;
   final Color inactiveColor;
@@ -14,6 +16,8 @@ class WavySeekBar extends StatefulWidget {
     super.key,
     required this.position,
     required this.duration,
+    this.audioBuffered,
+    this.videoBuffered,
     required this.onChanged,
     required this.activeColor,
     required this.inactiveColor,
@@ -105,6 +109,8 @@ class _WavySeekBarState extends State<WavySeekBar> with SingleTickerProviderStat
                   thumbColor: widget.thumbColor,
                   phase: _animationController.value * 2 * math.pi,
                   isPlaying: widget.isPlaying,
+                  audioBuffered: widget.audioBuffered,
+                  videoBuffered: widget.videoBuffered,
                 ),
               );
             },
@@ -131,6 +137,8 @@ class _WavySeekBarPainter extends CustomPainter {
   final Color thumbColor;
   final double phase;
   final bool isPlaying;
+  final Duration? audioBuffered;
+  final Duration? videoBuffered;
 
   _WavySeekBarPainter({
     required this.value,
@@ -140,14 +148,17 @@ class _WavySeekBarPainter extends CustomPainter {
     required this.thumbColor,
     required this.phase,
     required this.isPlaying,
+    this.audioBuffered,
+    this.videoBuffered,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     final double centerY = size.height / 2;
-    final double progress = value / max;
+    final double progress = max > 0 ? (value / max).clamp(0.0, 1.0) : 0.0;
     final double thumbX = progress * size.width;
 
+    // Draw base inactive track
     if (thumbX < size.width) {
       final Paint inactivePaint = Paint()
         ..color = inactiveColor
@@ -160,6 +171,44 @@ class _WavySeekBarPainter extends CustomPainter {
         Offset(size.width, centerY),
         inactivePaint,
       );
+    }
+
+    // Draw Video Buffered Bar (Background/Secondary)
+    if (videoBuffered != null && max > 0) {
+      final double videoProgress = (videoBuffered!.inMilliseconds / max).clamp(0.0, 1.0);
+      final double videoX = videoProgress * size.width;
+      if (videoX > thumbX) {
+        final Paint videoBufferPaint = Paint()
+          ..color = Colors.white.withAlpha(50) // Light grey/white for video
+          ..strokeWidth = 5 // Slightly thicker to peek out from behind audio
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round;
+
+        canvas.drawLine(
+          Offset(thumbX, centerY),
+          Offset(videoX, centerY),
+          videoBufferPaint,
+        );
+      }
+    }
+
+    // Draw Audio Buffered Bar (Primary/Accent)
+    if (audioBuffered != null && max > 0) {
+      final double audioProgress = (audioBuffered!.inMilliseconds / max).clamp(0.0, 1.0);
+      final double audioX = audioProgress * size.width;
+      if (audioX > thumbX) {
+        final Paint audioBufferPaint = Paint()
+          ..color = activeColor.withAlpha(80) // Brighter tint for audio
+          ..strokeWidth = 3
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round;
+
+        canvas.drawLine(
+          Offset(thumbX, centerY),
+          Offset(audioX, centerY),
+          audioBufferPaint,
+        );
+      }
     }
 
     if (thumbX > 0) {

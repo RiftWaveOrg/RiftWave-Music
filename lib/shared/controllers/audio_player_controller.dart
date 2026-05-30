@@ -60,11 +60,15 @@ class AudioPlayerController extends GetxController {
   final RxList<SongModel> upNextSuggestions = <SongModel>[].obs;
   String _lastSuggestionSongId = '';
 
+  bool _isPreloading = false;
+  int _lastPreloadedIndex = -1;
+
   @override
   void onInit() {
     super.onInit();
     _audioHandler = Get.find<RiftWaveAudioHandler>();
     _audioHandler.onPlaybackCompleted = _onTrackCompleted;
+    _audioHandler.onIndexChanged = _onAudioHandlerIndexChanged;
     _audioHandler.onSkipToNextCallback = () => skipToNext();
     _audioHandler.onSkipToPreviousCallback = () => skipToPrevious();
     _listenToStreams();
@@ -91,6 +95,24 @@ class AudioPlayerController extends GetxController {
         await prefs.setInt('last_position_', pos.inSeconds);
       }
     }, time: const Duration(seconds: 5));
+  }
+
+  void _onAudioHandlerIndexChanged(int newIndex) {
+    // If the index changed, it means just_audio natively advanced to the next preloaded item!
+    // We need to update our state to reflect the new song.
+    if (newIndex > 0) {
+      final nextIdx = _getNextIndex();
+      if (nextIdx != null) {
+        currentQueueIndex.value = nextIdx;
+        if (shuffleMode.value) {
+          _shufflePosition = _shuffledIndices.indexOf(nextIdx);
+        }
+        currentSong.value = queue[nextIdx];
+        totalDuration.value = Duration(milliseconds: queue[nextIdx].durationMs);
+        _persistQueue();
+        debugPrint('AudioPlayerController: Gapless transition completed. New song: ${queue[nextIdx].title}');
+      }
+    }
   }
 
   Future<void> _requestNotificationPermission() async {
@@ -182,6 +204,14 @@ class AudioPlayerController extends GetxController {
     _subscriptions.add(
       _audioHandler.positionStream.listen((Duration pos) {
         currentPosition.value = pos;
+        
+        // Trigger preloading when less than 30 seconds remaining
+        if (totalDuration.value.inSeconds > 0) {
+          final remaining = totalDuration.value.inSeconds - pos.inSeconds;
+          if (remaining <= 30) {
+            _preloadNextWorker();
+          }
+        }
       }),
     );
 
@@ -200,12 +230,82 @@ class AudioPlayerController extends GetxController {
     );
   }
 
+  Future<void> _preloadNextWorker() async {
+    if (_isPreloading || queue.isEmpty) return;
+    
+    final nextIdx = _getNextIndex();
+    if (nextIdx == null || nextIdx == _lastPreloadedIndex || nextIdx == currentQueueIndex.value) return;
+
+    _isPreloading = true;
+    try {
+      final nextSong = queue[nextIdx];
+      debugPrint('AudioPlayerController: Preloading next song: ${nextSong.title}');
+
+      // 1. Resolve sourceId if needed
+      SongModel activeSong = nextSong;
+      if (activeSong.sourceId.isEmpty) {
+        if (activeSong.source == MusicSource.youtube) {
+          final results = await Get.find<YouTubeApi>().search('${activeSong.title} ${activeSong.artist}');
+          if (results.isNotEmpty) activeSong = activeSong.copyWith(sourceId: results.first.sourceId);
+        } else {
+          final results = await Get.find<SaavnApi>().searchSongs('${activeSong.title} ${activeSong.artist}');
+          if (results.isNotEmpty) activeSong = activeSong.copyWith(sourceId: results.first.sourceId);
+        }
+      }
+
+      // 2. Fetch stream URL
+      String streamUrl = '';
+      if (activeSong.isDownloaded && activeSong.localPath != null) {
+        final file = File(activeSong.localPath!);
+        if (await file.exists()) {
+          streamUrl = Uri.file(activeSong.localPath!).toString();
+        }
+      }
+      
+      if (streamUrl.isEmpty) {
+        if (activeSong.source == MusicSource.youtube) {
+          streamUrl = await Get.find<YouTubeApi>().getStreamUrl(activeSong.sourceId.isNotEmpty ? activeSong.sourceId : activeSong.id);
+        } else {
+          streamUrl = await Get.find<SaavnApi>().getStreamUrl(activeSong.sourceId.isNotEmpty ? activeSong.sourceId : activeSong.id);
+        }
+      }
+
+      if (streamUrl.isNotEmpty) {
+        final mediaItem = MediaItem(
+          id: activeSong.id,
+          title: activeSong.title,
+          artist: activeSong.artist,
+          album: activeSong.album,
+          duration: Duration(milliseconds: activeSong.durationMs),
+          artUri: _getHighResArtUri(activeSong),
+        );
+
+        // 3. Inject into AudioHandler
+        await _audioHandler.preloadNextItem(mediaItem, streamUrl);
+        _lastPreloadedIndex = nextIdx;
+
+        // 4. Inject into VideoPlayerController if Video Mode is active
+        final isVideoMode = Get.isRegistered<SettingsController>() && Get.find<SettingsController>().videoModeEnabled.value;
+        if (isVideoMode && activeSong.source == MusicSource.youtube) {
+            final videoId = activeSong.sourceId.isNotEmpty ? activeSong.sourceId : activeSong.id;
+            if (Get.isRegistered<VideoPlayerController>()) {
+                await Get.find<VideoPlayerController>().preloadNextVideo(videoId);
+            }
+        }
+      }
+    } catch (e) {
+      debugPrint('AudioPlayerController: Preload failed: $e');
+    } finally {
+      _isPreloading = false;
+    }
+  }
+
   Future<void> playSong(SongModel song) async {
     queue.assignAll([song]);
     currentQueueIndex.value = 0;
     _resetShuffleIndices();
-    await _loadAndPlay(song);
     _persistQueue();
+    await _loadAndPlay(song);
   }
 
   Future<void> playFromQueue(int index) async {
@@ -217,6 +317,7 @@ class AudioPlayerController extends GetxController {
       if (_shufflePosition == -1) _shufflePosition = 0;
     }
 
+    _persistQueue();
     await _loadAndPlay(queue[index]);
   }
 
@@ -229,25 +330,21 @@ class AudioPlayerController extends GetxController {
     }
   }
 
+  bool wantsToPlayAfterLoad = false;
+
   Future<void> play({bool forceInternal = false}) async {
-    if (!forceInternal && Get.isRegistered<VideoPlayerController>()) {
-      final vpc = Get.find<VideoPlayerController>();
-      if (vpc.isHandlingPlayback) {
-        await vpc.play();
+    if (_audioHandler.mediaItem.value == null && currentSong.value != null) {
+      if (isBuffering.value) {
+        wantsToPlayAfterLoad = true;
         return;
       }
+      await _loadAndPlay(currentSong.value!);
+      return;
     }
     await _audioHandler.play();
   }
 
   Future<void> pause({bool forceInternal = false}) async {
-    if (!forceInternal && Get.isRegistered<VideoPlayerController>()) {
-      final vpc = Get.find<VideoPlayerController>();
-      if (vpc.isHandlingPlayback) {
-        await vpc.pause();
-        return;
-      }
-    }
     await _audioHandler.pause();
   }
 
@@ -260,9 +357,15 @@ class AudioPlayerController extends GetxController {
       return;
     }
 
+    if (nextIndex == _lastPreloadedIndex) {
+      debugPrint('AudioPlayerController: skipToNext() -> delegating to preloaded audio handler');
+      await _audioHandler.skipToNext();
+      return;
+    }
+
     currentQueueIndex.value = nextIndex;
-    await _loadAndPlay(queue[nextIndex]);
     _persistQueue();
+    await _loadAndPlay(queue[nextIndex]);
   }
 
   Future<void> skipToPrevious() async {
@@ -277,8 +380,8 @@ class AudioPlayerController extends GetxController {
     if (prevIndex == null) return;
 
     currentQueueIndex.value = prevIndex;
-    await _loadAndPlay(queue[prevIndex]);
     _persistQueue();
+    await _loadAndPlay(queue[prevIndex]);
   }
 
   Future<void> seekTo(Duration position) async {
@@ -286,7 +389,6 @@ class AudioPlayerController extends GetxController {
       final vpc = Get.find<VideoPlayerController>();
       if (vpc.isHandlingPlayback) {
         await vpc.seek(position);
-        return;
       }
     }
     await _audioHandler.seek(position);
@@ -356,7 +458,18 @@ class AudioPlayerController extends GetxController {
   }
 
   Future<void> clearQueue() async {
-    await _audioHandler.stop();
+    try {
+      await _audioHandler.stop();
+    } catch (e) {
+      debugPrint('AudioPlayerController: Error stopping audio handler: $e');
+    }
+    try {
+      if (Get.isRegistered<VideoPlayerController>()) {
+        await Get.find<VideoPlayerController>().player.stop();
+      }
+    } catch (e) {
+      debugPrint('AudioPlayerController: Error stopping video player: $e');
+    }
     queue.clear();
     _clearState();
     _persistQueue();
@@ -410,11 +523,14 @@ class AudioPlayerController extends GetxController {
 
   Future<void> _loadAndPlay(SongModel song) async {
     errorMessage.value = '';
+    // INSTANTLY update the current song so the UI clears the old song/video
+    currentSong.value = song;
+    hasSong.value = true;
+    wantsToPlayAfterLoad = false;
+    
     try {
       await _audioHandler.stop();
     } catch (_) {}
-    currentSong.value = song;
-    hasSong.value = true;
 
     final remainingInQueue = queue.length - 1 - currentQueueIndex.value;
     if (remainingInQueue < 5) {
@@ -493,6 +609,9 @@ class AudioPlayerController extends GetxController {
           duration: Duration(milliseconds: activeSong.durationMs),
           artUri: _getHighResArtUri(activeSong),
         );
+        // CRITICAL CHECK
+        if (currentSong.value?.id != song.id) return;
+
         await _audioHandler.setMediaItemAndPlay(mediaItem, streamUrl);
         success = true;
         debugPrint('AudioPlayerController: Playing from local download successfully!');
@@ -521,9 +640,13 @@ class AudioPlayerController extends GetxController {
       );
 
       final isVideoMode = Get.isRegistered<SettingsController>() && Get.find<SettingsController>().videoModeEnabled.value;
-      if (isVideoMode && activeSong.source == MusicSource.youtube) {
+      
+      // CRITICAL CHECK
+      if (currentSong.value?.id != song.id) return;
+
+      if (isVideoMode && !wantsToPlayAfterLoad) {
         await _audioHandler.setMediaItemOnly(mediaItem, streamUrl);
-        debugPrint('AudioPlayerController: Primary source loaded (Video Mode, playback deferred until video loads)');
+        debugPrint('AudioPlayerController: Primary source loaded (Video Mode, playback deferred)');
       } else {
         await _audioHandler.setMediaItemAndPlay(mediaItem, streamUrl);
         debugPrint('AudioPlayerController: Primary source loaded and playing successfully!');
@@ -563,6 +686,8 @@ class AudioPlayerController extends GetxController {
               duration: Duration(milliseconds: matchedSong.durationMs),
               artUri: _getHighResArtUri(matchedSong),
             );
+            // CRITICAL CHECK
+            if (currentSong.value?.id != song.id) return;
 
             await _audioHandler.setMediaItemAndPlay(mediaItem, streamUrl);
             success = true;
@@ -599,7 +724,14 @@ class AudioPlayerController extends GetxController {
             );
 
             final isVideoMode = Get.isRegistered<SettingsController>() && Get.find<SettingsController>().videoModeEnabled.value;
-            if (isVideoMode && activeSong.source == MusicSource.youtube) {
+            
+            // CRITICAL CHECK: Did the user dismiss the player or pick a different song while we were fetching the URL?
+            if (currentSong.value?.id != song.id) {
+              debugPrint('AudioPlayerController: Aborting playback because the song changed or queue was cleared during network fetch.');
+              return;
+            }
+
+            if (isVideoMode && !wantsToPlayAfterLoad) {
               await _audioHandler.setMediaItemOnly(mediaItem, streamUrl);
               debugPrint('AudioPlayerController: YouTube fallback loaded (Video Mode, playback deferred)');
             } else {
@@ -936,13 +1068,25 @@ class AudioPlayerController extends GetxController {
 
       List<SongModel> similar = [];
 
-      try {
-        final lastfm = Get.find<LastFmApi>();
-        debugPrint('AudioPlayerController: Fetching similar songs for cleanedTitle="$cleanedTitle", artist="$primaryArtist"');
-        final songs = await lastfm.getSimilarSongs(primaryArtist, cleanedTitle);
-        similar = songs.map((s) => s.copyWith(source: song.source)).toList();
-      } catch (e) {
-        debugPrint('Autoplay Fallback 1 (Last.fm Similar) failed: $e');
+      if (song.source == MusicSource.youtube) {
+        try {
+          debugPrint('AudioPlayerController: Fetching YouTube related songs for ${song.title}');
+          final ytResult = await yt.getRelatedSongs(song.sourceId.isNotEmpty ? song.sourceId : song.id);
+          similar = ytResult;
+        } catch (e) {
+          debugPrint('Autoplay YouTube Related failed: $e');
+        }
+      }
+
+      if (similar.isEmpty) {
+        try {
+          final lastfm = Get.find<LastFmApi>();
+          debugPrint('AudioPlayerController: Fetching similar songs for cleanedTitle="$cleanedTitle", artist="$primaryArtist"');
+          final songs = await lastfm.getSimilarSongs(primaryArtist, cleanedTitle);
+          similar = songs.map((s) => s.copyWith(source: song.source)).toList();
+        } catch (e) {
+          debugPrint('Autoplay Fallback 1 (Last.fm Similar) failed: $e');
+        }
       }
 
       if (song.source == MusicSource.youtube) {

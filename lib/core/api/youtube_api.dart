@@ -79,7 +79,10 @@ class YouTubeApi extends GetxService {
     }
   }
 
-  Future<Map<String, String>?> getDualStreamManifest(String videoId, String qualityPreference) async {
+  Future<Map<String, String>?> getDualStreamManifest(
+    String videoId,
+    String qualityPreference,
+  ) async {
     try {
       StreamManifest manifest;
       try {
@@ -91,29 +94,36 @@ class YouTubeApi extends GetxService {
         manifest = await _yt.videos.streamsClient.getManifest(videoId);
       }
 
-      
-      var videoStreams = manifest.videoOnly.where((stream) => stream.container.name == 'mp4').toList();
+      var videoStreams = manifest.videoOnly
+          .where((stream) => stream.container.name == 'mp4')
+          .toList();
       if (videoStreams.isEmpty) {
-        
         videoStreams = manifest.videoOnly.toList();
       }
-      
+
       if (videoStreams.isEmpty) return null;
 
-      
       VideoStreamInfo? selectedVideo;
       if (qualityPreference != 'Auto') {
-        final targetRes = int.tryParse(qualityPreference.replaceAll('p', '')) ?? 1080;
-        selectedVideo = videoStreams.where((s) => s.videoResolution.height <= targetRes).fold<VideoStreamInfo?>(
-          null, 
-          (prev, elem) => (prev == null || elem.videoResolution.height > prev.videoResolution.height) ? elem : prev
-        );
+        final targetRes =
+            int.tryParse(qualityPreference.replaceAll('p', '')) ?? 720;
+        selectedVideo = videoStreams
+            .where((s) => s.videoResolution.height <= targetRes)
+            .fold<VideoStreamInfo?>(
+              null,
+              (prev, elem) =>
+                  (prev == null ||
+                      elem.videoResolution.height > prev.videoResolution.height)
+                  ? elem
+                  : prev,
+            );
       }
-      
+
       selectedVideo ??= videoStreams.withHighestBitrate();
 
-      
-      final mp4AudioStreams = manifest.audioOnly.where((stream) => stream.container.name == 'mp4').toList();
+      final mp4AudioStreams = manifest.audioOnly
+          .where((stream) => stream.container.name == 'mp4')
+          .toList();
       final selectedAudio = mp4AudioStreams.isNotEmpty
           ? mp4AudioStreams.withHighestBitrate()
           : manifest.audioOnly.withHighestBitrate();
@@ -178,7 +188,7 @@ class YouTubeApi extends GetxService {
     try {
       final List<Map<String, dynamic>> playlists = [];
       final searchResults = await _yt.search.searchContent(query);
-      
+
       for (final pl in searchResults) {
         if (pl is SearchPlaylist) {
           final imageUrl = pl.thumbnails.isNotEmpty
@@ -204,11 +214,69 @@ class YouTubeApi extends GetxService {
       throw ParseException('YouTube Playlists Error: ${e.toString()}');
     }
   }
+
+  Future<List<SongModel>> getRelatedSongs(String videoId) async {
+    try {
+      final video = await _yt.videos.get(VideoId(videoId));
+      final related = await _yt.videos.getRelatedVideos(video);
+      final List<SongModel> songs = [];
+
+      if (related != null) {
+        for (final rVideo in related) {
+          final duration = rVideo.duration?.inMilliseconds ?? 0;
+          if (duration > 0 && (duration < 60000 || duration > 900000)) {
+            continue;
+          }
+          songs.add(
+            SongModel(
+              id: rVideo.id.value,
+              title: rVideo.title,
+              artist: rVideo.author,
+              album: 'YouTube',
+              thumbnailUrl: rVideo.thumbnails.highResUrl,
+              audioUrl: '',
+              durationMs: duration,
+              source: MusicSource.youtube,
+              sourceId: rVideo.id.value,
+            ),
+          );
+        }
+      }
+      return songs;
+    } on SocketException {
+      throw NoInternetException();
+    } on HttpException {
+      throw NoInternetException();
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw ParseException('YouTube Related Error: ${e.toString()}');
+    }
+  }
+
   static String getMaxResThumbnail(String videoId) {
     return 'https://img.youtube.com/vi/$videoId/maxresdefault.jpg';
   }
 
   static String getHqThumbnail(String videoId) {
     return 'https://img.youtube.com/vi/$videoId/hqdefault.jpg';
+  }
+
+  Future<List<String>> getSearchSuggestions(String query) async {
+    try {
+      if (query.trim().isEmpty) return [];
+      // Append " song" to force YouTube to return music-related suggestions
+      final suggestions = await _yt.search.getQuerySuggestions('$query song');
+      
+      return suggestions.map((s) {
+        // Clean up the " song" suffix if it exists so it looks natural to the user
+        if (s.toLowerCase().endsWith(' song')) {
+          return s.substring(0, s.length - 5).trim();
+        }
+        return s;
+      }).toSet().toList(); // Remove duplicates
+    } catch (e) {
+      print('YouTube Suggestions Error: $e');
+      return [];
+    }
   }
 }

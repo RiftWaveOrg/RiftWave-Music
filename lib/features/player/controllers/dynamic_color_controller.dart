@@ -75,7 +75,8 @@ class DynamicColorController extends GetxController {
     // WCAG AA Contrast ratio 4.5:1 for text vs background
     int maxIterations = 10;
     while (_contrastRatio(textPrimary, background) < 4.5 && maxIterations > 0) {
-      background = _ensureDark(background, maxLuminance: HSLColor.fromColor(background).lightness - 0.05);
+      final double nextMax = (HSLColor.fromColor(background).lightness - 0.05).clamp(0.0, 1.0);
+      background = _ensureDark(background, maxLuminance: nextMax);
       maxIterations--;
     }
 
@@ -120,7 +121,8 @@ class DynamicColorController extends GetxController {
   Color _ensureDark(Color color, {double maxLuminance = 0.3}) {
     final hsl = HSLColor.fromColor(color);
     if (hsl.lightness > maxLuminance) {
-      return hsl.withLightness(maxLuminance * 0.6).toColor();
+      final newLightness = (maxLuminance * 0.6).clamp(0.0, 1.0);
+      return hsl.withLightness(newLightness).toColor();
     }
     return color;
   }
@@ -134,9 +136,9 @@ class DynamicColorController extends GetxController {
   }
 
   double _relativeLuminance(Color color) {
-    double r = color.r / 255.0;
-    double g = color.g / 255.0;
-    double b = color.b / 255.0;
+    double r = color.red / 255.0;
+    double g = color.green / 255.0;
+    double b = color.blue / 255.0;
 
     r = r <= 0.03928 ? r / 12.92 : _gammaCorrect(r);
     g = g <= 0.03928 ? g / 12.92 : _gammaCorrect(g);

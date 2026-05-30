@@ -4,6 +4,8 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:riftwave_music/routes/app_routes.dart';
 import 'package:riftwave_music/shared/controllers/audio_player_controller.dart';
+import 'package:riftwave_music/features/settings/controllers/settings_controller.dart';
+import 'package:riftwave_music/features/player/controllers/dynamic_color_controller.dart';
 
 class MiniPlayer extends StatelessWidget {
   const MiniPlayer({super.key});
@@ -11,6 +13,8 @@ class MiniPlayer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = Get.find<AudioPlayerController>();
+    final settingsController = Get.find<SettingsController>();
+    final colorController = Get.put(DynamicColorController());
     final colorScheme = Theme.of(context).colorScheme;
 
     return Obx(() {
@@ -28,19 +32,71 @@ class MiniPlayer extends StatelessWidget {
         },
         child: GestureDetector(
           onTap: () => Get.toNamed(AppRoutes.player),
-          child: Container(
-            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              color: colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(14),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withAlpha(40),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
+          child: Stack(
+            children: [
+              if (settingsController.ambientLightEnabled.value && controller.isPlaying.value)
+                Positioned.fill(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(14),
+                      child: const SizedBox.shrink()
+                          .animate(onPlay: (c) => c.repeat(reverse: true))
+                          .custom(
+                        duration: const Duration(seconds: 4),
+                        builder: (context, value, child) {
+                          final xPos1 = -1.2 + (value * 2.4);
+                          final xPos2 = 1.2 - (value * 2.4);
+                          return Stack(
+                            children: [
+                              Container(
+                                decoration: BoxDecoration(
+                                  gradient: RadialGradient(
+                                    center: Alignment(xPos1, 0),
+                                    radius: 2.0,
+                                    colors: [
+                                      colorController.playerColors.value.accent.withAlpha(120),
+                                      Colors.transparent,
+                                    ],
+                                    stops: const [0.0, 0.8],
+                                  ),
+                                ),
+                              ),
+                              Container(
+                                decoration: BoxDecoration(
+                                  gradient: RadialGradient(
+                                    center: Alignment(xPos2, 0),
+                                    radius: 2.0,
+                                    colors: [
+                                      colorController.playerColors.value.gradientTop.withAlpha(120),
+                                      Colors.transparent,
+                                    ],
+                                    stops: const [0.0, 0.8],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ),
                 ),
-              ],
-            ),
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: settingsController.ambientLightEnabled.value 
+                      ? colorScheme.surfaceContainerHighest.withAlpha(180) 
+                      : colorScheme.surfaceContainerHighest,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(40),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -165,12 +221,14 @@ class MiniPlayer extends StatelessWidget {
                 ),
               ],
             ),
-          ).animate().slideY(
-            begin: 1,
-            end: 0,
-            duration: 400.ms,
-            curve: Curves.easeOutCubic,
-          ).fadeIn(duration: 300.ms),
+          ),
+          ],
+        ).animate().slideY(
+          begin: 1,
+          end: 0,
+          duration: 400.ms,
+          curve: Curves.easeOutCubic,
+        ).fadeIn(duration: 300.ms),
         ),
       );
     });

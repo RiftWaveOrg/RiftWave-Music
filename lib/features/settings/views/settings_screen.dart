@@ -41,6 +41,18 @@ class SettingsScreen extends GetView<SettingsController> {
               subtitle: controller.isAmoled ? 'AMOLED Black' : 'Dark',
               onTap: () => _showThemeDialog(context),
             )).animate().fadeIn(duration: 400.ms, delay: 100.ms),
+            
+            const SizedBox(height: 8),
+            Obx(() => _buildSettingsSwitchTile(
+              colorScheme: colorScheme,
+              icon: Icons.lens_blur_rounded,
+              title: 'Ambient Light Effect',
+              subtitle: 'Dynamic glowing sweeps behind music players',
+              value: controller.ambientLightEnabled.value,
+              onChanged: (val) {
+                controller.setAmbientLight(val);
+              },
+            )).animate().fadeIn(duration: 400.ms, delay: 120.ms),
 
             const SizedBox(height: 24),
 
