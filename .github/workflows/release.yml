@@ -23,7 +23,7 @@ jobs:
           - os: windows-latest
             target: windows
             name: Windows
-          - os: ubuntu-latest
+          - os: ubuntu-22.04
             target: linux
             name: Linux
           - os: macos-latest
