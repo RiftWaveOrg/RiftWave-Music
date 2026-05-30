@@ -226,7 +226,7 @@ class SettingsScreen extends GetView<SettingsController> {
             Center(
               child: Column(
                 children: [
-                  Image.asset('assets/images/logo.png', width: 64, height: 64),
+                  Image.asset('assets/images/RiftWave_logo.png', width: 64, height: 64),
                   const SizedBox(height: 12),
                   Text(
                     'RiftWave',
