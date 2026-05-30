@@ -11,6 +11,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 
 class UpdateController extends GetxController {
   final RxBool updateAvailable = false.obs;
@@ -24,6 +25,43 @@ class UpdateController extends GetxController {
   void onInit() {
     super.onInit();
     _checkForUpdates();
+  }
+
+  Future<String?> _findMatchingApkUrl(List<dynamic> assets) async {
+    if (!Platform.isAndroid) return null;
+    
+    final deviceInfo = DeviceInfoPlugin();
+    final androidInfo = await deviceInfo.androidInfo;
+    final supportedAbis = androidInfo.supportedAbis;
+    
+    String? arm64Apk;
+    String? arm32Apk;
+    String? x86_64Apk;
+    String? fallbackApk;
+    
+    for (var asset in assets) {
+      final name = (asset['name'] as String).toLowerCase();
+      if (!name.endsWith('.apk')) continue;
+      
+      final url = asset['browser_download_url'] as String;
+      if (name.contains('arm64') || name.contains('v8a')) {
+        arm64Apk = url;
+      } else if (name.contains('arm32') || name.contains('v7a') || name.contains('armeabi')) {
+        arm32Apk = url;
+      } else if (name.contains('x86_64') || name.contains('x64')) {
+        x86_64Apk = url;
+      } else {
+        fallbackApk = url;
+      }
+    }
+    
+    for (var abi in supportedAbis) {
+      if (abi.contains('arm64-v8a') && arm64Apk != null) return arm64Apk;
+      if (abi.contains('armeabi-v7a') && arm32Apk != null) return arm32Apk;
+      if (abi.contains('x86_64') && x86_64Apk != null) return x86_64Apk;
+    }
+    
+    return arm64Apk ?? arm32Apk ?? fallbackApk;
   }
 
   Future<void> _checkForUpdates() async {
@@ -52,12 +90,9 @@ class UpdateController extends GetxController {
             
             // Find APK asset
             final assets = data['assets'] as List<dynamic>;
-            for (var asset in assets) {
-              final name = asset['name'] as String;
-              if (name.endsWith('.apk')) {
-                apkDownloadUrl.value = asset['browser_download_url'] as String;
-                break;
-              }
+            final matchUrl = await _findMatchingApkUrl(assets);
+            if (matchUrl != null) {
+              apkDownloadUrl.value = matchUrl;
             }
             
             updateAvailable.value = true;
@@ -89,12 +124,9 @@ class UpdateController extends GetxController {
           changelog.value = releaseBody;
           
           final assets = data['assets'] as List<dynamic>;
-          for (var asset in assets) {
-            final name = asset['name'] as String;
-            if (name.endsWith('.apk')) {
-              apkDownloadUrl.value = asset['browser_download_url'] as String;
-              break;
-            }
+          final matchUrl = await _findMatchingApkUrl(assets);
+          if (matchUrl != null) {
+            apkDownloadUrl.value = matchUrl;
           }
           
           updateAvailable.value = true;
