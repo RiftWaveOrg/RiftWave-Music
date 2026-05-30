@@ -17,6 +17,7 @@ import 'package:riftwave_music/features/player/models/player_colors.dart';
 import 'package:riftwave_music/features/library/controllers/library_controller.dart';
 import 'package:riftwave_music/shared/controllers/audio_player_controller.dart';
 import 'package:riftwave_music/shared/controllers/download_controller.dart';
+import 'package:riftwave_music/features/settings/controllers/settings_controller.dart';
 import 'package:riftwave_music/shared/widgets/playlist_selector_sheet.dart';
 import 'package:flutter/rendering.dart' show ScrollDirection;
 import 'package:riftwave_music/features/player/widgets/wavy_seekbar.dart';
@@ -32,13 +33,15 @@ class PlayerScreen extends StatefulWidget {
   State<PlayerScreen> createState() => _PlayerScreenState();
 }
 
-class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderStateMixin {
+class _PlayerScreenState extends State<PlayerScreen> with TickerProviderStateMixin {
   late final AnimationController _likeController;
   late final AudioPlayerController _audioController;
   late final DynamicColorController _colorController;
   late final PlayerController _playerController;
   late final LyricsController _lyricsController;
+  late final SettingsController _settingsController;
   late final ScrollController _pageScrollController;
+  late final AnimationController _pulseController;
   final GlobalKey _lyricsKey = GlobalKey();
   final GlobalKey _bioKey = GlobalKey();
 
@@ -50,6 +53,7 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
     _colorController = Get.find<DynamicColorController>();
     _playerController = Get.find<PlayerController>();
     _lyricsController = Get.find<LyricsController>();
+    _settingsController = Get.find<SettingsController>();
 
     _likeController = AnimationController(
       vsync: this,
@@ -58,6 +62,11 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
       upperBound: 1.2,
       value: 1.0,
     );
+
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    )..repeat(reverse: true);
 
     final song = _audioController.currentSong.value;
     if (song != null && song.thumbnailUrl.isNotEmpty) {
@@ -68,6 +77,7 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
   @override
   void dispose() {
     _likeController.dispose();
+    _pulseController.dispose();
     _pageScrollController.dispose();
     super.dispose();
   }
@@ -390,30 +400,91 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
 
       return Scaffold(
         backgroundColor: Colors.transparent,
-        body: AnimatedContainer(
-          duration: const Duration(milliseconds: 600),
-          curve: Curves.easeInOut,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              stops: const [0.0, 0.35, 0.6, 1.0],
-              colors: [
-                colors.gradientTop,
-                colors.gradientMid,
-                colors.background,
-                colors.background,
-              ],
+        body: Stack(
+          children: [
+            // Base background
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 600),
+              curve: Curves.easeInOut,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: const [0.0, 0.35, 0.6, 1.0],
+                  colors: [
+                    colors.gradientTop,
+                    colors.gradientMid,
+                    colors.background,
+                    colors.background,
+                  ],
+                ),
+              ),
             ),
-          ),
-          child: SafeArea(
-            child: SingleChildScrollView(
-              controller: _pageScrollController,
-              physics: const BouncingScrollPhysics(),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  children: [
+            
+            // Sweeping Ambient Light Effect
+            Obx(() {
+              if (!_settingsController.ambientLightEnabled.value) {
+                return const SizedBox.shrink();
+              }
+              
+              return AnimatedBuilder(
+                animation: _pulseController,
+                builder: (context, child) {
+                  final pulse = _pulseController.value;
+                  final isPlaying = _audioController.isPlaying.value;
+                  
+                  final xPos1 = -1.2 + (pulse * 2.4);
+                  final xPos2 = 1.2 - (pulse * 2.4);
+                  
+                  return AnimatedOpacity(
+                    duration: const Duration(milliseconds: 800),
+                    opacity: isPlaying ? 0.8 : 0.0,
+                    child: Stack(
+                      children: [
+                        // Sweeping Light 1 (Accent Color)
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: RadialGradient(
+                              center: Alignment(xPos1, -0.5),
+                              radius: 1.5,
+                              colors: [
+                                colors.accent.withAlpha(180),
+                                Colors.transparent,
+                              ],
+                              stops: const [0.0, 0.8],
+                            ),
+                          ),
+                        ),
+                        // Sweeping Light 2 (Secondary Color)
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: RadialGradient(
+                              center: Alignment(xPos2, -0.3),
+                              radius: 1.6,
+                              colors: [
+                                colors.gradientTop.withAlpha(150),
+                                Colors.transparent,
+                              ],
+                              stops: const [0.0, 0.8],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            }),
+
+            // Content
+            SafeArea(
+              child: SingleChildScrollView(
+                controller: _pageScrollController,
+                physics: const BouncingScrollPhysics(),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    children: [
                     _buildHeader(colors, song),
                     const SizedBox(height: 24),
                     _buildAlbumArt(colors, song, screenSize),
@@ -435,6 +506,7 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
               ),
             ),
           ),
+          ],
         ),
       );
     });
@@ -599,7 +671,6 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
               if (isHandling) {
                 return GestureDetector(
                   onTap: () {
-                    
                     Get.toNamed('/fullscreen_video');
                   },
                   child: AspectRatio(
@@ -607,7 +678,6 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
                     child: Stack(
                       fit: StackFit.expand,
                         children: [
-                        
                         if (song != null && song.thumbnailUrl.isNotEmpty)
                           CachedNetworkImage(
                             imageUrl: song.thumbnailUrl,
@@ -619,13 +689,29 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
                             color: Colors.black.withAlpha(120),
                           ),
                         ),
-                        
                         Video(
                           controller: videoController.videoController,
                           controls: NoVideoControls,
                           fit: BoxFit.contain,
                         ),
-                        
+                        // YouTube-like buffering overlay — shows during mid-playback buffering
+                        Obx(() {
+                          final isMidPlaybackBuffering = _audioController.isPlaying.value && _audioController.isBuffering.value;
+                          if (!isMidPlaybackBuffering) return const SizedBox.shrink();
+                          return Container(
+                            color: Colors.black.withAlpha(80),
+                            child: const Center(
+                              child: SizedBox(
+                                width: 40,
+                                height: 40,
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 3,
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
                         Positioned(
                           right: 8,
                           bottom: 8,
@@ -641,6 +727,32 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
                       ],
                     ),
                   ),
+                );
+              }
+              // Video is loading but not ready yet — show album art with loading overlay
+              if (videoController.isVideoLoading.value) {
+                return Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (song != null && song.thumbnailUrl.isNotEmpty)
+                      CachedNetworkImage(
+                        imageUrl: song.thumbnailUrl,
+                        fit: BoxFit.cover,
+                      ),
+                    Container(
+                      color: Colors.black.withAlpha(100),
+                      child: const Center(
+                        child: SizedBox(
+                          width: 36,
+                          height: 36,
+                          child: CircularProgressIndicator(
+                            color: Colors.white70,
+                            strokeWidth: 2.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 );
               }
 
@@ -785,6 +897,11 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
     return Obx(() {
       final pos = _audioController.currentPosition.value;
       final dur = _audioController.totalDuration.value;
+      final audioBuf = _audioController.bufferedPosition.value;
+      
+      final hasVideo = Get.isRegistered<VideoPlayerController>();
+      final videoController = hasVideo ? Get.find<VideoPlayerController>() : null;
+      final videoBuf = videoController?.videoBufferedPosition.value;
 
       return Column(
         children: [
@@ -793,6 +910,8 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
             child: WavySeekBar(
               position: pos,
               duration: dur,
+              audioBuffered: audioBuf,
+              videoBuffered: videoBuf,
               onChanged: (value) {
                 _audioController.seekTo(value);
               },
@@ -913,8 +1032,13 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
           onPressed: () { HapticFeedback.lightImpact(); _audioController.skipToPrevious(); },
         ),
         Obx(() {
-          final bool isLoading = _audioController.isBuffering.value ||
-              (Get.isRegistered<VideoPlayerController>() && Get.find<VideoPlayerController>().isVideoLoading.value);
+          final hasVideo = Get.isRegistered<VideoPlayerController>();
+          final videoController = hasVideo ? Get.find<VideoPlayerController>() : null;
+          
+          final bool isVideoLoading = hasVideo && videoController!.isVideoLoading.value;
+          final bool isAudioInitialLoading = _audioController.isBuffering.value && _audioController.currentPosition.value.inSeconds == 0 && !_audioController.isPlaying.value;
+          
+          final bool isInitialLoading = (isVideoLoading || isAudioInitialLoading) && !_audioController.isPlaying.value;
           final bool isPlaying = _audioController.isPlaying.value;
 
           return GestureDetector(
@@ -937,7 +1061,7 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
                 child: Center(
                   child: AnimatedSwitcher(
                     duration: const Duration(milliseconds: 200),
-                    child: isLoading
+                    child: isInitialLoading
                         ? SizedBox(
                             key: const ValueKey('loading'),
                             width: 28,
@@ -1009,14 +1133,50 @@ class _PlayerScreenState extends State<PlayerScreen> with SingleTickerProviderSt
         children: [
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Text(
-              'LYRICS',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: colors.accent,
-                fontSize: 13,
-                letterSpacing: 1.2,
-              ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'LYRICS',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: colors.accent,
+                    fontSize: 13,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+                Obx(() {
+                  if (!_lyricsController.hasSyncedLyrics.value) return const SizedBox.shrink();
+                  
+                  final offset = _lyricsController.syncOffsetMs.value / 1000;
+                  final offsetStr = offset > 0 ? '+$offset' : offset.toString();
+                  
+                  return Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.remove_circle_outline, size: 20),
+                        color: colors.textSecondary,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        onPressed: () => _lyricsController.shiftLyrics(-500),
+                        tooltip: 'Delay Lyrics',
+                      ),
+                      Text(
+                        'Sync: ${offsetStr}s',
+                        style: TextStyle(color: colors.textSecondary, fontSize: 11),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.add_circle_outline, size: 20),
+                        color: colors.textSecondary,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        onPressed: () => _lyricsController.shiftLyrics(500),
+                        tooltip: 'Advance Lyrics',
+                      ),
+                    ],
+                  );
+                }),
+              ],
             ),
           ),
           const SizedBox(height: 12),

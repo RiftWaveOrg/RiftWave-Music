@@ -44,6 +44,7 @@ class SearchScreen extends GetView<MusicSearchController> {
                 child: TextField(
                   controller: controller.textController,
                   onChanged: controller.updateQuery,
+                  onSubmitted: controller.performSearch,
                   style: TextStyle(color: colorScheme.onSurface),
                   decoration: InputDecoration(
                     hintText: 'Songs, artists, or albums',
@@ -85,11 +86,49 @@ class SearchScreen extends GetView<MusicSearchController> {
                   );
                 }
 
-                if (controller.query.isNotEmpty) {
+                if (controller.query.isNotEmpty && !controller.hasPerformedSearch.value) {
+                  if (controller.searchSuggestions.isEmpty) {
+                    return const SizedBox.shrink();
+                  }
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    itemCount: controller.searchSuggestions.length,
+                    itemBuilder: (context, index) {
+                      final suggestion = controller.searchSuggestions[index];
+                      return ListTile(
+                        onTap: () {
+                          controller.textController.text = suggestion;
+                          controller.updateQuery(suggestion);
+                          FocusScope.of(context).unfocus();
+                          controller.performSearch(suggestion);
+                        },
+                        leading: Icon(
+                          Icons.search_rounded,
+                          color: colorScheme.onSurface.withAlpha(150),
+                        ),
+                        title: Text(
+                          suggestion,
+                          style: TextStyle(
+                            color: colorScheme.onSurface,
+                            fontSize: 16,
+                          ),
+                        ),
+                        trailing: Icon(
+                          Icons.arrow_outward_rounded,
+                          color: colorScheme.onSurface.withAlpha(150),
+                          size: 20,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      );
+                    },
+                  );
+                }
+
+                if (controller.query.isNotEmpty && controller.hasPerformedSearch.value) {
                   final filteredSongs = (controller.activeFilter.value == 'All' || controller.activeFilter.value == 'Songs')
                       ? controller.songResults
                       : controller.songResults.where((s) {
-                          if (controller.activeFilter.value == 'YouTube') return s.source == MusicSource.youtube;
+                          if (controller.activeFilter.value == 'YouTube' || controller.activeFilter.value == 'Videos') return s.source == MusicSource.youtube;
                           if (controller.activeFilter.value == 'JioSaavn') return s.source == MusicSource.saavn;
                           return false;
                         }).toList();
@@ -97,7 +136,7 @@ class SearchScreen extends GetView<MusicSearchController> {
                   bool showEmptyState = false;
                   if (controller.activeFilter.value == 'All') {
                     showEmptyState = filteredSongs.isEmpty && controller.albumResults.isEmpty && controller.playlistResults.isEmpty;
-                  } else if (controller.activeFilter.value == 'Songs' || controller.activeFilter.value == 'YouTube') {
+                  } else if (controller.activeFilter.value == 'Songs' || controller.activeFilter.value == 'YouTube' || controller.activeFilter.value == 'Videos') {
                     showEmptyState = filteredSongs.isEmpty;
                   } else if (controller.activeFilter.value == 'Albums') {
                     showEmptyState = controller.albumResults.isEmpty;
@@ -123,6 +162,8 @@ class SearchScreen extends GetView<MusicSearchController> {
                               _buildFilterButton(context, 'YouTube'),
                               const SizedBox(width: 8),
                               _buildFilterButton(context, 'JioSaavn'),
+                              const SizedBox(width: 8),
+                              _buildFilterButton(context, 'Videos'),
                               const SizedBox(width: 8),
                               _buildFilterButton(context, 'Songs'),
                               const SizedBox(width: 8),
@@ -160,11 +201,11 @@ class SearchScreen extends GetView<MusicSearchController> {
                             : ListView(
                                 padding: const EdgeInsets.symmetric(horizontal: 20),
                                 children: [
-                                  if (controller.activeFilter.value == 'All' || controller.activeFilter.value == 'Songs' || controller.activeFilter.value == 'YouTube' || controller.activeFilter.value == 'JioSaavn') ...[
-                                    if ((controller.activeFilter.value == 'All' || controller.activeFilter.value == 'JioSaavn' || controller.activeFilter.value == 'YouTube') && filteredSongs.isNotEmpty)
+                                  if (controller.activeFilter.value == 'All' || controller.activeFilter.value == 'Songs' || controller.activeFilter.value == 'YouTube' || controller.activeFilter.value == 'Videos' || controller.activeFilter.value == 'JioSaavn') ...[
+                                    if ((controller.activeFilter.value == 'All' || controller.activeFilter.value == 'JioSaavn' || controller.activeFilter.value == 'YouTube' || controller.activeFilter.value == 'Videos') && filteredSongs.isNotEmpty)
                                       Padding(
                                         padding: const EdgeInsets.only(bottom: 12, top: 8),
-                                        child: Text('Top Songs', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                                        child: Text(controller.activeFilter.value == 'Videos' ? 'Top Videos' : 'Top Songs', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
                                       ),
                                     ...filteredSongs.take(controller.activeFilter.value == 'All' ? 5 : filteredSongs.length).toList().asMap().entries.map((entry) {
                                       final index = entry.key;

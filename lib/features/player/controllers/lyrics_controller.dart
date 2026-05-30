@@ -14,6 +14,7 @@ class LyricsController extends GetxController {
   final RxBool hasSyncedLyrics = false.obs;
   final RxInt currentLineIndex = (-1).obs;
   final RxBool isAutoScrollPaused = false.obs;
+  final RxInt syncOffsetMs = 0.obs;
 
   late final ScrollController scrollController;
   late final AudioPlayerController _audioController;
@@ -69,6 +70,7 @@ class LyricsController extends GetxController {
     hasSyncedLyrics.value = false;
     currentLineIndex.value = -1;
     isAutoScrollPaused.value = false;
+    syncOffsetMs.value = 0;
     _manualScrollTimer?.cancel();
   }
 
@@ -99,12 +101,19 @@ class LyricsController extends GetxController {
     }
   }
 
+  void shiftLyrics(int ms) {
+    syncOffsetMs.value += ms;
+    _updateActiveLineIndex(_audioController.currentPosition.value);
+  }
+
   void _updateActiveLineIndex(Duration position) {
     if (syncedLyrics.isEmpty) return;
 
+    final adjustedPosition = position + Duration(milliseconds: syncOffsetMs.value);
+
     int activeIndex = -1;
     for (int i = 0; i < syncedLyrics.length; i++) {
-      if (syncedLyrics[i].time <= position) {
+      if (syncedLyrics[i].time <= adjustedPosition) {
         activeIndex = i;
       } else {
         break;

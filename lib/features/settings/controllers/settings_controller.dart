@@ -15,6 +15,7 @@ class SettingsController extends GetxController {
   static const String _videoModeKey = 'video_mode';
   static const String _videoQualityKey = 'video_quality';
   static const String _dataWarningKey = 'has_seen_data_warning';
+  static const String _ambientLightKey = 'ambient_light_enabled';
 
   final Rx<ThemeVariant> themeVariant = ThemeVariant.dark.obs;
   final RxString appVersion = '1.0.0'.obs;
@@ -23,6 +24,7 @@ class SettingsController extends GetxController {
   final RxBool videoModeEnabled = false.obs;
   final RxString videoQuality = 'Auto'.obs;
   final RxBool hasSeenDataWarning = false.obs;
+  final RxBool ambientLightEnabled = false.obs;
 
   @override
   void onInit() {
@@ -64,6 +66,7 @@ class SettingsController extends GetxController {
     videoModeEnabled.value = prefs.getBool(_videoModeKey) ?? false;
     videoQuality.value = prefs.getString(_videoQualityKey) ?? 'Auto';
     hasSeenDataWarning.value = prefs.getBool(_dataWarningKey) ?? false;
+    ambientLightEnabled.value = prefs.getBool(_ambientLightKey) ?? false;
   }
 
   String _detectRegionFromLocale() {
@@ -112,6 +115,12 @@ class SettingsController extends GetxController {
     hasSeenDataWarning.value = true;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_dataWarningKey, true);
+  }
+
+  Future<void> setAmbientLight(bool enabled) async {
+    ambientLightEnabled.value = enabled;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_ambientLightKey, enabled);
   }
 
   Future<void> requestBackgroundActivity() async {
