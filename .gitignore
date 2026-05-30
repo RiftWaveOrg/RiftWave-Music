@@ -50,3 +50,7 @@ GoogleService-Info.plist
 
 # Build output
 /build/
+
+# Android App Signing
+*.jks
+key.properties
