@@ -61,6 +61,7 @@ class UpdateController extends GetxController {
             }
             
             updateAvailable.value = true;
+            showUpdateDialog();
           }
         }
       }
@@ -185,5 +186,55 @@ class UpdateController extends GetxController {
         debugPrint(e.toString());
       }
     }
+  }
+  void showUpdateDialog() {
+    final colorScheme = Get.theme.colorScheme;
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: colorScheme.surface,
+        title: Row(
+          children: [
+            Icon(Icons.system_update_rounded, color: colorScheme.primary),
+            const SizedBox(width: 8),
+            const Text('Update Available'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Version ${latestVersion.value} is available!',
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Flexible(
+              child: SingleChildScrollView(
+                child: Text(changelog.value, style: TextStyle(color: colorScheme.onSurface.withAlpha(200))),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              skipVersion(latestVersion.value);
+              Get.back();
+            },
+            child: Text('Skip', style: TextStyle(color: colorScheme.onSurface.withAlpha(150))),
+          ),
+          TextButton(
+            onPressed: () => Get.back(),
+            child: Text('Later', style: TextStyle(color: colorScheme.onSurface.withAlpha(150))),
+          ),
+          FilledButton(
+            onPressed: () {
+              Get.back();
+              startUpdate();
+            },
+            child: const Text('Update'),
+          ),
+        ],
+      ),
+      barrierDismissible: false,
+    );
   }
 }

@@ -172,7 +172,9 @@ class SettingsScreen extends GetView<SettingsController> {
                     Get.back(); // close loader
                   }
                   
-                  if (!hasUpdate) {
+                  if (hasUpdate) {
+                    updateCtrl.showUpdateDialog();
+                  } else {
                     Get.snackbar(
                       'Up to Date', 
                       'You are already on the latest version.', 
