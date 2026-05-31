@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:riftwave_music/features/settings/controllers/settings_controller.dart';
 import 'package:riftwave_music/features/settings/views/about_screen.dart';
 import 'package:riftwave_music/features/settings/views/privacy_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:riftwave_music/shared/controllers/update_controller.dart';
 import 'package:riftwave_music/core/models/region.dart';
+import 'package:riftwave_music/features/settings/views/yt_login_screen.dart' as rift_yt;
 
 class SettingsScreen extends GetView<SettingsController> {
   const SettingsScreen({super.key});
@@ -142,6 +144,44 @@ class SettingsScreen extends GetView<SettingsController> {
 
             const SizedBox(height: 24),
 
+            _buildSectionTitle(theme, 'YouTube Integration (Beta)'),
+            const SizedBox(height: 12),
+            Obx(() => _buildSettingsTile(
+              colorScheme: colorScheme,
+              iconWidget: controller.isYouTubeLoggedIn.value && controller.ytAvatarUrl.value.isNotEmpty
+                  ? CircleAvatar(
+                      radius: 12,
+                      backgroundImage: CachedNetworkImageProvider(controller.ytAvatarUrl.value),
+                    )
+                  : Icon(
+                      controller.isYouTubeLoggedIn.value 
+                          ? Icons.check_circle_rounded 
+                          : Icons.account_circle_rounded,
+                      color: colorScheme.primary,
+                    ),
+              title: controller.isYouTubeLoggedIn.value 
+                  ? 'YouTube Account' 
+                  : 'Login to YouTube',
+              subtitle: controller.isYouTubeLoggedIn.value
+                  ? 'Manage your connected YouTube account'
+                  : 'Unlock personalized recommendations and fix rate limits',
+              onTap: () {
+                _showYouTubeAccountDialog(context, controller, colorScheme);
+              },
+            )).animate().fadeIn(duration: 400.ms, delay: 285.ms),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Text(
+                'RiftWave is privacy-first. Your login cookies stay on this device and are only used to connect to YouTube.',
+                style: TextStyle(
+                  color: colorScheme.onSurface.withAlpha(120),
+                  fontSize: 12,
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
             _buildSectionTitle(theme, 'Advanced'),
             const SizedBox(height: 12),
             _buildSettingsTile(
@@ -181,7 +221,7 @@ class SettingsScreen extends GetView<SettingsController> {
                   final hasUpdate = await updateCtrl.checkForUpdatesManual();
                   
                   if (Get.isDialogOpen ?? false) {
-                    Get.back(); // close loader
+                    Get.back(); 
                   }
                   
                   if (hasUpdate) {
@@ -272,7 +312,8 @@ class SettingsScreen extends GetView<SettingsController> {
 
   Widget _buildSettingsTile({
     required ColorScheme colorScheme,
-    required IconData icon,
+    IconData? icon,
+    Widget? iconWidget,
     required String title,
     required String subtitle,
     required VoidCallback onTap,
@@ -294,10 +335,12 @@ class SettingsScreen extends GetView<SettingsController> {
                   color: colorScheme.primary.withAlpha(25),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(
-                  icon,
-                  color: colorScheme.primary,
-                  size: 20,
+                child: Center(
+                  child: iconWidget ?? Icon(
+                    icon,
+                    color: colorScheme.primary,
+                    size: 20,
+                  ),
                 ),
               ),
               const SizedBox(width: 14),
@@ -860,6 +903,122 @@ class SettingsScreen extends GetView<SettingsController> {
           ),
         ),
       ),
+    );
+  }
+
+  void _showYouTubeAccountDialog(BuildContext context, SettingsController controller, ColorScheme colorScheme) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Obx(() {
+          final bool isLoggedIn = controller.isYouTubeLoggedIn.value;
+          final String avatar = controller.ytAvatarUrl.value;
+          final String name = controller.ytAccountName.value;
+          final String handle = controller.ytAccountHandle.value;
+          
+          return SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.video_library_rounded, color: colorScheme.primary, size: 28),
+                      const SizedBox(width: 8),
+                      Text(
+                        'YouTube Account',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 28,
+                        backgroundColor: colorScheme.surfaceContainerHigh,
+                        backgroundImage: isLoggedIn && avatar.isNotEmpty 
+                            ? CachedNetworkImageProvider(avatar)
+                            : null,
+                        child: (!isLoggedIn || avatar.isEmpty)
+                            ? Icon(Icons.person, size: 32, color: colorScheme.onSurfaceVariant)
+                            : null,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              isLoggedIn ? 'YouTube Account' : 'Guest',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: colorScheme.onSurface,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              isLoggedIn ? 'Signed in' : 'Not signed in',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (isLoggedIn)
+                        IconButton(
+                          icon: Icon(Icons.logout, color: colorScheme.error),
+                          tooltip: 'Log out from YouTube',
+                          onPressed: () async {
+                            await controller.logoutYouTube();
+                            if (context.mounted) Navigator.pop(context);
+                          },
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.add_circle_outline),
+                      label: Text(isLoggedIn ? 'Switch / Add Account' : 'Add an Account'),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: BorderSide(color: colorScheme.outlineVariant),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.pop(context);
+                        Get.to(() => const rift_yt.YouTubeLoginScreen());
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        });
+      },
     );
   }
 }

@@ -72,7 +72,7 @@ class DynamicColorController extends GetxController {
     Color textPrimary = Colors.white;
     Color textSecondary = Colors.white.withAlpha(179);
 
-    // WCAG AA Contrast ratio 4.5:1 for text vs background
+    
     int maxIterations = 10;
     while (_contrastRatio(textPrimary, background) < 4.5 && maxIterations > 0) {
       final double nextMax = (HSLColor.fromColor(background).lightness - 0.05).clamp(0.0, 1.0);

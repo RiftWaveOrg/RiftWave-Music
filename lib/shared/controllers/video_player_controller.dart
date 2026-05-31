@@ -60,7 +60,7 @@ class VideoPlayerController extends GetxController with WidgetsBindingObserver {
       }
     });
     
-    // Sync video buffering to UI
+    
     player.stream.buffer.listen((bufferDuration) {
       videoBufferedPosition.value = bufferDuration;
     });
@@ -71,7 +71,7 @@ class VideoPlayerController extends GetxController with WidgetsBindingObserver {
       }
     });
     
-    // Gapless preloading listener
+    
     ever(audioController.currentSong, (song) {
       if (song != null && isHandlingPlayback) {
         final nextIndex = audioController.currentQueueIndex.value + 1;
@@ -81,7 +81,7 @@ class VideoPlayerController extends GetxController with WidgetsBindingObserver {
       }
     });
 
-    // Master Sync Listeners
+    
     ever(audioController.isPlaying, (playing) {
       if (isHandlingPlayback) {
         if (playing && !player.state.buffering) {
@@ -127,13 +127,13 @@ class VideoPlayerController extends GetxController with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (!isHandlingPlayback) return;
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
-      // Not strictly necessary since audio continues and video is just visual
+      
     }
   }
 
   Future<void> preloadNextVideo(String id) async {
     if (!isVideoMode.value) return;
-    if (player.state.playlist.medias.length > 1) return; // already preloaded
+    if (player.state.playlist.medias.length > 1) return; 
     try {
       final manifest = await ytApi.getDualStreamManifest(id, settings.videoQuality.value);
       if (manifest != null) {
@@ -163,18 +163,18 @@ class VideoPlayerController extends GetxController with WidgetsBindingObserver {
       debugPrint('VideoPlayerController: Using preloaded video for gapless playback!');
       _preloadedSongId = null;
       
-      // If media_kit hasn't naturally advanced yet, force it.
+      
       if (player.state.playlist.index < player.state.playlist.medias.length - 1) {
         await player.next();
       }
       
-      // Keep it available. If it needs to buffer the first frame, the global listener will handle it!
+      
       isVideoAvailable.value = true;
       isVideoLoading.value = false;
       return;
     }
 
-    // INSTANTLY clear old video state
+    
     _syncTimer?.cancel();
     isVideoAvailable.value = false;
     isVideoLoading.value = false;
@@ -187,15 +187,15 @@ class VideoPlayerController extends GetxController with WidgetsBindingObserver {
         final videoUrl = manifest['videoUrl']!;
         final media = Media(videoUrl);
 
-        // ALWAYS mute media_kit — just_audio handles ALL audio
+        
         await player.setVolume(0.0);
 
-        // Open video — it starts streaming/buffering immediately
+        
         player.open(Playlist([media]), play: true);
         isVideoAvailable.value = true;
         _startSyncTimer();
 
-        // Safety timeout: if video never finishes buffering within 15 seconds, clear the spinner
+        
         Future.delayed(const Duration(seconds: 15), () {
           if (isVideoLoading.value) {
             isVideoLoading.value = false;

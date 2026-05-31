@@ -102,8 +102,8 @@ class AudioPlayerController extends GetxController {
   }
 
   void _onAudioHandlerIndexChanged(int newIndex) {
-    // If the index changed, it means just_audio natively advanced to the next preloaded item!
-    // We need to update our state to reflect the new song.
+    
+    
     if (newIndex > 0) {
       final nextIdx = _getNextIndex();
       if (nextIdx != null) {
@@ -209,7 +209,7 @@ class AudioPlayerController extends GetxController {
       _audioHandler.positionStream.listen((Duration pos) {
         currentPosition.value = pos;
         
-        // Trigger preloading when less than 30 seconds remaining
+        
         if (totalDuration.value.inSeconds > 0) {
           final remaining = totalDuration.value.inSeconds - pos.inSeconds;
           if (remaining <= 30) {
@@ -245,7 +245,7 @@ class AudioPlayerController extends GetxController {
       final nextSong = queue[nextIdx];
       debugPrint('AudioPlayerController: Preloading next song: ${nextSong.title}');
 
-      // 1. Resolve sourceId if needed
+      
       SongModel activeSong = nextSong;
       if (activeSong.sourceId.isEmpty) {
         if (activeSong.source == MusicSource.youtube) {
@@ -257,7 +257,7 @@ class AudioPlayerController extends GetxController {
         }
       }
 
-      // 2. Fetch stream URL
+      
       String streamUrl = '';
       if (activeSong.isDownloaded && activeSong.localPath != null) {
         final file = File(activeSong.localPath!);
@@ -284,11 +284,11 @@ class AudioPlayerController extends GetxController {
           artUri: _getHighResArtUri(activeSong),
         );
 
-        // 3. Inject into AudioHandler
+        
         await _audioHandler.preloadNextItem(mediaItem, streamUrl);
         _lastPreloadedIndex = nextIdx;
 
-        // 4. Inject into VideoPlayerController if Video Mode is active
+        
         final isVideoMode = Get.isRegistered<SettingsController>() && Get.find<SettingsController>().videoModeEnabled.value;
         if (isVideoMode && activeSong.source == MusicSource.youtube) {
             final videoId = activeSong.sourceId.isNotEmpty ? activeSong.sourceId : activeSong.id;
@@ -527,7 +527,7 @@ class AudioPlayerController extends GetxController {
 
   Future<void> _loadAndPlay(SongModel song) async {
     errorMessage.value = '';
-    // INSTANTLY update the current song so the UI clears the old song/video
+    
     currentSong.value = song;
     hasSong.value = true;
     wantsToPlayAfterLoad = false;
@@ -613,7 +613,7 @@ class AudioPlayerController extends GetxController {
           duration: Duration(milliseconds: activeSong.durationMs),
           artUri: _getHighResArtUri(activeSong),
         );
-        // CRITICAL CHECK
+        
         if (currentSong.value?.id != song.id) return;
 
         await _audioHandler.setMediaItemAndPlay(mediaItem, streamUrl);
@@ -628,8 +628,14 @@ class AudioPlayerController extends GetxController {
     if (!success) {
       try {
         debugPrint('AudioPlayerController: Trying primary source (${activeSong.source.name}) for: ${activeSong.title}');
+      Map<String, String>? headers;
       if (activeSong.source == MusicSource.youtube) {
-        streamUrl = await Get.find<YouTubeApi>().getStreamUrl(activeSong.sourceId.isNotEmpty ? activeSong.sourceId : activeSong.id);
+        final ytApi = Get.find<YouTubeApi>();
+        streamUrl = await ytApi.getStreamUrl(activeSong.sourceId.isNotEmpty ? activeSong.sourceId : activeSong.id);
+        
+        headers = {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        };
       } else {
         streamUrl = await Get.find<SaavnApi>().getStreamUrl(activeSong.sourceId.isNotEmpty ? activeSong.sourceId : activeSong.id);
       }
@@ -645,14 +651,14 @@ class AudioPlayerController extends GetxController {
 
       final isVideoMode = Get.isRegistered<SettingsController>() && Get.find<SettingsController>().videoModeEnabled.value;
       
-      // CRITICAL CHECK
+      
       if (currentSong.value?.id != song.id) return;
 
       if (isVideoMode && !wantsToPlayAfterLoad) {
-        await _audioHandler.setMediaItemOnly(mediaItem, streamUrl);
+        await _audioHandler.setMediaItemOnly(mediaItem, streamUrl, headers: headers);
         debugPrint('AudioPlayerController: Primary source loaded (Video Mode, playback deferred)');
       } else {
-        await _audioHandler.setMediaItemAndPlay(mediaItem, streamUrl);
+        await _audioHandler.setMediaItemAndPlay(mediaItem, streamUrl, headers: headers);
         debugPrint('AudioPlayerController: Primary source loaded and playing successfully!');
       }
       success = true;
@@ -690,7 +696,7 @@ class AudioPlayerController extends GetxController {
               duration: Duration(milliseconds: matchedSong.durationMs),
               artUri: _getHighResArtUri(matchedSong),
             );
-            // CRITICAL CHECK
+            
             if (currentSong.value?.id != song.id) return;
 
             await _audioHandler.setMediaItemAndPlay(mediaItem, streamUrl);
@@ -716,7 +722,12 @@ class AudioPlayerController extends GetxController {
             activeSong = matchedSong;
             currentSong.value = matchedSong;
 
-            streamUrl = await Get.find<YouTubeApi>().getStreamUrl(matchedSong.id);
+            final ytApi = Get.find<YouTubeApi>();
+            streamUrl = await ytApi.getStreamUrl(matchedSong.id);
+
+            final headers = {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            };
 
             final mediaItem = MediaItem(
               id: matchedSong.id,
@@ -729,17 +740,17 @@ class AudioPlayerController extends GetxController {
 
             final isVideoMode = Get.isRegistered<SettingsController>() && Get.find<SettingsController>().videoModeEnabled.value;
             
-            // CRITICAL CHECK: Did the user dismiss the player or pick a different song while we were fetching the URL?
+            
             if (currentSong.value?.id != song.id) {
               debugPrint('AudioPlayerController: Aborting playback because the song changed or queue was cleared during network fetch.');
               return;
             }
 
             if (isVideoMode && !wantsToPlayAfterLoad) {
-              await _audioHandler.setMediaItemOnly(mediaItem, streamUrl);
+              await _audioHandler.setMediaItemOnly(mediaItem, streamUrl, headers: headers);
               debugPrint('AudioPlayerController: YouTube fallback loaded (Video Mode, playback deferred)');
             } else {
-              await _audioHandler.setMediaItemAndPlay(mediaItem, streamUrl);
+              await _audioHandler.setMediaItemAndPlay(mediaItem, streamUrl, headers: headers);
               debugPrint('AudioPlayerController: YouTube fallback loaded and playing successfully!');
             }
             success = true;

@@ -158,7 +158,7 @@ class _WavySeekBarPainter extends CustomPainter {
     final double progress = max > 0 ? (value / max).clamp(0.0, 1.0) : 0.0;
     final double thumbX = progress * size.width;
 
-    // Draw base inactive track
+    
     if (thumbX < size.width) {
       final Paint inactivePaint = Paint()
         ..color = inactiveColor
@@ -173,14 +173,14 @@ class _WavySeekBarPainter extends CustomPainter {
       );
     }
 
-    // Draw Video Buffered Bar (Background/Secondary)
+    
     if (videoBuffered != null && max > 0) {
       final double videoProgress = (videoBuffered!.inMilliseconds / max).clamp(0.0, 1.0);
       final double videoX = videoProgress * size.width;
       if (videoX > thumbX) {
         final Paint videoBufferPaint = Paint()
-          ..color = Colors.white.withAlpha(50) // Light grey/white for video
-          ..strokeWidth = 5 // Slightly thicker to peek out from behind audio
+          ..color = Colors.white.withAlpha(50) 
+          ..strokeWidth = 5 
           ..style = PaintingStyle.stroke
           ..strokeCap = StrokeCap.round;
 
@@ -192,13 +192,13 @@ class _WavySeekBarPainter extends CustomPainter {
       }
     }
 
-    // Draw Audio Buffered Bar (Primary/Accent)
+    
     if (audioBuffered != null && max > 0) {
       final double audioProgress = (audioBuffered!.inMilliseconds / max).clamp(0.0, 1.0);
       final double audioX = audioProgress * size.width;
       if (audioX > thumbX) {
         final Paint audioBufferPaint = Paint()
-          ..color = activeColor.withAlpha(80) // Brighter tint for audio
+          ..color = activeColor.withAlpha(80) 
           ..strokeWidth = 3
           ..style = PaintingStyle.stroke
           ..strokeCap = StrokeCap.round;

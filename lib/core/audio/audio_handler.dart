@@ -21,6 +21,10 @@ class RiftWaveAudioHandler extends BaseAudioHandler with SeekHandler {
   void Function()? onSkipToNextCallback;
   void Function()? onSkipToPreviousCallback;
 
+  
+  
+  bool _isTransitioning = false;
+
   AudioPlayer get player => _player;
   Stream<Duration> get positionStream => _player.positionStream;
   Stream<Duration> get bufferedPositionStream => _player.bufferedPositionStream;
@@ -50,7 +54,7 @@ class RiftWaveAudioHandler extends BaseAudioHandler with SeekHandler {
     });
 
     _player.processingStateStream.listen((state) {
-      if (state == ProcessingState.completed) {
+      if (state == ProcessingState.completed && !_isTransitioning) {
         onPlaybackCompleted?.call();
       }
     });
@@ -65,26 +69,32 @@ class RiftWaveAudioHandler extends BaseAudioHandler with SeekHandler {
     }
   }
 
-  Future<void> setMediaItemOnly(MediaItem item, String audioUrl) async {
+  Future<void> setMediaItemOnly(MediaItem item, String audioUrl, {Map<String, String>? headers}) async {
+    _isTransitioning = true;
+    
     _mediaItems.clear();
     _mediaItems.add(item);
     mediaItem.add(item);
     
     debugPrint('RiftWaveAudioHandler: Loading primary audio URL: $audioUrl');
     
-    // Clear and add the first item
-    await _playlist.clear();
-    final uri = Uri.parse(audioUrl);
-    await _playlist.add(AudioSource.uri(uri, tag: item));
     
-    // EXPLICITLY seek to 0 to prevent just_audio from starting at the previous song's position
     try {
+      await _playlist.clear();
+      final uri = Uri.parse(audioUrl);
+      await _playlist.add(AudioSource.uri(uri, tag: item, headers: headers));
+      
+      
       await _player.seek(Duration.zero, index: 0);
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('RiftWaveAudioHandler: Interrupted during setMediaItemOnly ($e). This is expected if skipped rapidly.');
+    }
+    
+    _isTransitioning = false;
   }
 
-  Future<void> preloadNextItem(MediaItem item, String audioUrl) async {
-    // Only add if it's not already in the playlist (prevent duplicates)
+  Future<void> preloadNextItem(MediaItem item, String audioUrl, {Map<String, String>? headers}) async {
+    
     if (_mediaItems.any((m) => m.id == item.id)) {
         return;
     }
@@ -93,22 +103,28 @@ class RiftWaveAudioHandler extends BaseAudioHandler with SeekHandler {
     debugPrint('RiftWaveAudioHandler: Preloading next audio URL: $audioUrl');
     
     final uri = Uri.parse(audioUrl);
-    await _playlist.add(AudioSource.uri(uri, tag: item));
+    await _playlist.add(AudioSource.uri(uri, tag: item, headers: headers));
   }
 
-  Future<void> setMediaItemAndPlay(MediaItem item, String audioUrl) async {
-    await setMediaItemOnly(item, audioUrl);
-    await _player.play();
+  Future<void> setMediaItemAndPlay(MediaItem item, String audioUrl, {Map<String, String>? headers}) async {
+    try {
+      await setMediaItemOnly(item, audioUrl, headers: headers);
+      await _player.play();
+    } catch (e) {
+      debugPrint('RiftWaveAudioHandler: Interrupted during play ($e)');
+    }
   }
 
   @override
   Future<void> prepareFromUri(Uri uri, [Map<String, dynamic>? extras]) async {
+    _isTransitioning = true;
     try {
       await _playlist.clear();
       await _playlist.add(AudioSource.uri(uri));
     } catch (e) {
       debugPrint('RiftWaveAudioHandler: Failed to prepare audio — $e');
     }
+    _isTransitioning = false;
   }
 
   @override
@@ -123,9 +139,16 @@ class RiftWaveAudioHandler extends BaseAudioHandler with SeekHandler {
 
   @override
   Future<void> stop() async {
+    _isTransitioning = true;
     _positionTimer?.cancel();
-    await _player.stop();
-    await super.stop();
+    try {
+      await _player.stop();
+      await super.stop();
+    } catch (e) {
+      debugPrint('RiftWaveAudioHandler: Interrupted during stop ($e)');
+    }
+    
+    
   }
 
   @override
@@ -136,10 +159,10 @@ class RiftWaveAudioHandler extends BaseAudioHandler with SeekHandler {
   @override
   Future<void> skipToNext() async {
     if (_playlist.length > 1 && _player.currentIndex != null && _player.currentIndex! < _playlist.length - 1) {
-       // Let just_audio naturally skip to the preloaded next item
+       
        await _player.seekToNext();
     } else {
-       // Fallback to app-level queue management
+       
        onSkipToNextCallback?.call();
     }
   }

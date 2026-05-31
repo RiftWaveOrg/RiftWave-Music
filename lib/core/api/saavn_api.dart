@@ -258,7 +258,7 @@ class SaavnApi extends GetxService {
       final List<dynamic> results = data['results'] ?? [];
       if (results.isEmpty) return null;
 
-      // Try to find an exact match to avoid showing the wrong artist's image
+      
       for (final result in results) {
         final resultName = result['name'] ?? result['title'] ?? '';
         if (resultName.toString().trim().toLowerCase() == name.trim().toLowerCase()) {
@@ -266,7 +266,7 @@ class SaavnApi extends GetxService {
         }
       }
 
-      // If no exact match is found, return null so we can safely fall back to YouTube!
+      
       return null;
     } on DioException catch (e) {
       _handleDioError(e);

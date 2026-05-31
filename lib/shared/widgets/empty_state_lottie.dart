@@ -25,15 +25,15 @@ class EmptyStateLottie extends StatelessWidget {
   String _getLottieUrl() {
     switch (type) {
       case EmptyStateType.search:
-        return 'https://assets9.lottiefiles.com/packages/lf20_1wzq12s5.json'; // Search empty
+        return 'https://assets9.lottiefiles.com/packages/lf20_1wzq12s5.json'; 
       case EmptyStateType.history:
-        return 'https://assets2.lottiefiles.com/packages/lf20_z9wz5uho.json'; // History/Clock empty
+        return 'https://assets2.lottiefiles.com/packages/lf20_z9wz5uho.json'; 
       case EmptyStateType.library:
       case EmptyStateType.downloads:
       case EmptyStateType.liked:
-        return 'https://assets4.lottiefiles.com/private_files/lf30_cgfdhxgx.json'; // General empty box
+        return 'https://assets4.lottiefiles.com/private_files/lf30_cgfdhxgx.json'; 
       case EmptyStateType.lyrics:
-        return 'https://assets8.lottiefiles.com/packages/lf20_wnw499b4.json'; // Text/Document empty
+        return 'https://assets8.lottiefiles.com/packages/lf20_wnw499b4.json'; 
     }
   }
 

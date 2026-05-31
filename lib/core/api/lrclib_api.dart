@@ -12,6 +12,13 @@ class LrcLibApi extends GetxService {
     receiveTimeout: const Duration(seconds: 8),
   ));
 
+  Dio getDioForFallback() {
+    return Dio(BaseOptions(
+      connectTimeout: const Duration(seconds: 8),
+      receiveTimeout: const Duration(seconds: 8),
+    ));
+  }
+
   static const String _lyricsBoxName = 'lyrics_box';
 
   Future<Box> _getBox() async {
