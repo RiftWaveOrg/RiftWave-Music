@@ -79,6 +79,51 @@ class YouTubeApi extends GetxService {
     }
   }
 
+  Future<void> downloadStreamToPath(
+      String videoId, String savePath, void Function(double) onProgress) async {
+    try {
+      StreamManifest manifest;
+      try {
+        manifest = await _yt.videos.streamsClient.getManifest(
+          videoId,
+          ytClients: [YoutubeApiClient.androidVr],
+        );
+      } catch (_) {
+        manifest = await _yt.videos.streamsClient.getManifest(videoId);
+      }
+
+      final mp4Streams = manifest.audioOnly
+          .where((stream) => stream.container.name == 'mp4')
+          .toList();
+      final audioStream = mp4Streams.isNotEmpty
+          ? mp4Streams.withHighestBitrate()
+          : manifest.audioOnly.withHighestBitrate();
+
+      final stream = _yt.videos.streamsClient.get(audioStream);
+      final file = File(savePath);
+      final fileStream = file.openWrite();
+      final totalSize = audioStream.size.totalBytes;
+      int downloadedSize = 0;
+
+      await for (final chunk in stream) {
+        downloadedSize += chunk.length;
+        fileStream.add(chunk);
+        onProgress(downloadedSize / totalSize);
+      }
+      await fileStream.flush();
+      await fileStream.close();
+    } on SocketException {
+      throw NoInternetException();
+    } on HttpException {
+      throw NoInternetException();
+    } catch (e) {
+      if (e is ApiException) rethrow;
+      throw SongUnavailableException(
+        'Failed to download YouTube audio stream: ${e.toString()}',
+      );
+    }
+  }
+
   Future<Map<String, String>?> getDualStreamManifest(
     String videoId,
     String qualityPreference,

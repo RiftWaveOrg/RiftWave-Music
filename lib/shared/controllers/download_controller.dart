@@ -43,32 +43,36 @@ class DownloadController extends GetxController {
       
       String audioUrl = '';
       final targetId = song.sourceId.isNotEmpty ? song.sourceId : song.id;
+      
       if (song.source == MusicSource.youtube) {
         final yt = Get.find<YouTubeApi>();
-        audioUrl = await yt.getStreamUrl(targetId);
+        await yt.downloadStreamToPath(targetId, savePath, (progress) {
+          downloadProgress[song.id] = progress;
+        });
+        audioUrl = savePath; 
       } else {
         final saavn = Get.find<SaavnApi>();
         audioUrl = await saavn.getStreamUrl(targetId);
-      }
+        
+        if (audioUrl.isEmpty) throw Exception('No audio URL available for download');
 
-      if (audioUrl.isEmpty) throw Exception('No audio URL available for download');
-
-      await _dio.download(
-        audioUrl,
-        savePath,
-        options: Options(
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept': '*/*',
-            'Connection': 'keep-alive',
+        await _dio.download(
+          audioUrl,
+          savePath,
+          options: Options(
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'Accept': '*/*',
+              'Connection': 'keep-alive',
+            },
+          ),
+          onReceiveProgress: (received, total) {
+            if (total != -1) {
+              downloadProgress[song.id] = received / total;
+            }
           },
-        ),
-        onReceiveProgress: (received, total) {
-          if (total != -1) {
-            downloadProgress[song.id] = received / total;
-          }
-        },
-      );
+        );
+      }
 
       final downloadedSong = song.copyWith(
         isDownloaded: true,
