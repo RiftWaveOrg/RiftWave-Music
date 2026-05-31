@@ -30,7 +30,7 @@ Powered by robust APIs behind the scenes (such as YouTube and JioSaavn), RiftWav
 - 🚫 **Ad-Free Experience:** Uninterrupted listening, forever.
 - 🎨 **Material You & Dynamic Theming:** Beautiful UI that adapts to your device's wallpaper, featuring True Black (AMOLED) and sleek dark modes.
 - 📥 **Offline Downloads:** Cache and download your favorite tracks directly to your local storage to listen anywhere, anytime.
-- 🎬 **Music Video Mode (Beta):** Watch HD music videos natively integrated directly within the player.
+- 🎬 **Music Video Mode:** Watch HD music videos natively integrated directly within the player.
 - 📝 **Live Synced Lyrics:** Follow along with your favorite songs using real-time synchronized lyrics.
 - 🔁 **Gapless Playback:** Seamless transition between tracks for the perfect album listening experience.
 - 📱 **Cross-Platform Support:** Available for Android, Windows, Linux, and macOS.
@@ -88,10 +88,10 @@ Here is a glimpse into the beautiful design and experience of RiftWave Music:
 
 Grab the latest version of RiftWave Music from the [Releases](https://github.com/Pratyush0803/RiftWave-Music/releases) page!
 
-- **Android:** Download the `.apk` file (`app-arm64-v8a-release.apk` recommended for most modern phones).
-- **Windows:** Download the `.zip` file, extract it, and run `riftwave_music.exe`.
-- **Linux:** Download the `.tar.gz` bundle.
-- **macOS:** Download the `.zip` bundle.
+- **Android:** Download the `.apk` file (`RiftWave-Android-arm64.apk` recommended for most modern phones).
+- **Windows:** Download the `RiftWave-Windows.zip` file, extract it, and run the `.exe` inside.
+- **Linux:** Download the `RiftWave-Linux.tar.gz` bundle.
+- **macOS:** Download the `RiftWave-macOS.zip` bundle.
 
 ---
 
