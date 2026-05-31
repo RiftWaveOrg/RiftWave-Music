@@ -75,6 +75,7 @@ class AudioPlayerController extends GetxController {
     _restoreQueue();
     _requestNotificationPermission();
 
+    bool isFirstLoad = true;
     ever<SongModel?>(currentSong, (song) {
       if (song != null && song.thumbnailUrl.isNotEmpty && song.thumbnailUrl != _lastColorUrl) {
         _lastColorUrl = song.thumbnailUrl;
@@ -84,9 +85,12 @@ class AudioPlayerController extends GetxController {
       }
       if (song != null && song.id != _lastSuggestionSongId) {
         _lastSuggestionSongId = song.id;
-        _refreshUpNextSuggestions(song);
+        if (isFirstLoad) {
+          isFirstLoad = false;
+        } else {
+          _refreshUpNextSuggestions(song);
+        }
       }
-
     });
 
     interval(currentPosition, (pos) async {

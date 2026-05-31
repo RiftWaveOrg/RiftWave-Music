@@ -13,6 +13,7 @@ class PlayerController extends GetxController {
   final RxInt selectedTab = 0.obs;
 
   final RxString artistBio = ''.obs;
+  final RxString artistImageUrl = ''.obs;
   final RxList<SongModel> similarSongs = <SongModel>[].obs;
 
   final RxBool isLoadingBio = false.obs;
@@ -57,6 +58,7 @@ class PlayerController extends GetxController {
 
   void _clearData() {
     artistBio.value = '';
+    artistImageUrl.value = '';
     similarSongs.clear();
   }
 
@@ -74,35 +76,56 @@ class PlayerController extends GetxController {
         if (artistId != null) {
           final details = await saavn.getArtistDetails(artistId);
           final bio = details['biography'] as String? ?? '';
-          if (bio.isNotEmpty) {
-            debugPrint('PlayerController._fetchArtistBio: JioSaavn bio loaded successfully (length: ${bio.length})');
-            artistBio.value = bio;
-            return;
+          final img = details['imageUrl'] as String? ?? '';
+          
+          if (img.isNotEmpty) {
+            artistImageUrl.value = img;
           }
-          debugPrint('PlayerController._fetchArtistBio: JioSaavn bio was empty');
-        } else {
-          debugPrint('PlayerController._fetchArtistBio: JioSaavn artist ID not found');
+          if (bio.isNotEmpty) {
+            debugPrint('PlayerController._fetchArtistBio: JioSaavn bio loaded successfully');
+            artistBio.value = bio;
+          }
         }
       } catch (e) {
         debugPrint('PlayerController._fetchArtistBio JioSaavn Error: $e');
       }
 
-      try {
-        final lastfm = Get.find<LastFmApi>();
-        debugPrint('PlayerController._fetchArtistBio: trying Last.fm for "$primaryArtist"');
-        final bio = await lastfm.getArtistBio(primaryArtist);
-        if (bio.isNotEmpty) {
-          debugPrint('PlayerController._fetchArtistBio: Last.fm bio loaded successfully (length: ${bio.length})');
-          artistBio.value = bio;
-          return;
+      // Fallback for image: YouTube
+      if (artistImageUrl.value.isEmpty) {
+        try {
+          final yt = Get.find<YouTubeApi>();
+          debugPrint('PlayerController._fetchArtistBio: trying YouTube for artist image "$primaryArtist"');
+          final ytImage = await yt.getChannelThumbnail(primaryArtist);
+          if (ytImage != null && ytImage.isNotEmpty) {
+            artistImageUrl.value = ytImage;
+            debugPrint('PlayerController._fetchArtistBio: YouTube artist image loaded successfully');
+          }
+        } catch (e) {
+          debugPrint('PlayerController._fetchArtistBio YouTube Image Error: $e');
         }
-        debugPrint('PlayerController._fetchArtistBio: Last.fm bio was empty');
-      } catch (e) {
-        debugPrint('PlayerController._fetchArtistBio Last.fm Error: $e');
       }
 
-      debugPrint('PlayerController._fetchArtistBio: no biography available from any source');
-      artistBio.value = 'No biography available for this artist.';
+      // Fallback for bio: Last.fm
+      if (artistBio.value.isEmpty) {
+        try {
+          final lastfm = Get.find<LastFmApi>();
+          debugPrint('PlayerController._fetchArtistBio: trying Last.fm for "$primaryArtist"');
+          final bio = await lastfm.getArtistBio(primaryArtist);
+          if (bio.isNotEmpty) {
+            debugPrint('PlayerController._fetchArtistBio: Last.fm bio loaded successfully');
+            artistBio.value = bio;
+          } else {
+            debugPrint('PlayerController._fetchArtistBio: Last.fm bio was empty');
+          }
+        } catch (e) {
+          debugPrint('PlayerController._fetchArtistBio Last.fm Error: $e');
+        }
+      }
+
+      if (artistBio.value.isEmpty) {
+        debugPrint('PlayerController._fetchArtistBio: no biography available from any source');
+        artistBio.value = 'No biography available for this artist.';
+      }
     } catch (e) {
       debugPrint('PlayerController._fetchArtistBio: outer catch error: $e');
       artistBio.value = 'No biography available for this artist.';
