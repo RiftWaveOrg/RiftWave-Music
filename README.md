@@ -7,11 +7,11 @@
 *No ads. No tracking. No accounts. Just pure music.*
 
 [![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20Windows%20%7C%20Linux%20%7C%20macOS-blue?logo=flutter&logoColor=white)](https://flutter.dev)
-[![GitHub Release](https://img.shields.io/github/v/release/Pratyush0803/RiftWave-Music?color=success&label=Latest%20Release)](https://github.com/Pratyush0803/RiftWave-Music/releases)
+[![GitHub Release](https://img.shields.io/github/v/release/Pratyush0803/RiftWave-Music?color=success&label=Latest%20Release&logo=github)](https://github.com/Pratyush0803/RiftWave-Music/releases)
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](LICENSE)
 [![GitHub stars](https://img.shields.io/github/stars/Pratyush0803/RiftWave-Music?style=social)](https://github.com/Pratyush0803/RiftWave-Music/stargazers)
 
-[**Download**](#-download) • [**Features**](#-features) • [**Screenshots**](#-screenshots) • [**Installation**](#-installation) • [**Privacy**](#-privacy-policy)
+[**Download**](#-download) • [**Features**](#-features) • [**Screenshots**](#-screenshots) • [**FAQ**](#-faq) • [**Legal Disclaimer**](#-legal-disclaimer--terms-of-use)
 
 </div>
 
@@ -29,14 +29,14 @@ Powered by robust APIs behind the scenes (such as YouTube and JioSaavn), RiftWav
 
 - 🚫 **Ad-Free Experience:** Uninterrupted listening, forever.
 - 🎨 **Material You & Dynamic Theming:** Beautiful UI that adapts to your device's wallpaper, featuring True Black (AMOLED) and sleek dark modes.
-- 📥 **Offline Downloads:** Cache and download your favorite tracks directly to your local storage to listen anywhere, anytime.
+- 📥 **Offline Downloads:** Cache and download your favorite tracks directly to your local storage using our custom high-speed chunked downloader.
 - 🎬 **Music Video Mode:** Watch HD music videos natively integrated directly within the player.
-- 📝 **Live Synced Lyrics:** Follow along with your favorite songs using real-time synchronized lyrics.
+- 📝 **Live Synced Lyrics:** Follow along with your favorite songs using real-time synchronized lyrics (powered by LRCLIB).
 - 🔁 **Gapless Playback:** Seamless transition between tracks for the perfect album listening experience.
 - 📱 **Cross-Platform Support:** Available for Android, Windows, Linux, and macOS.
 - 🔒 **Privacy First:** Your data stays on your device. No telemetry, no usage tracking, no cloud accounts.
 - 📻 **Smart Recommendations:** Auto-play similar tracks to keep the music going based on your listening history.
-- 🎛️ **Audio Controls:** Lock-screen controls, background playback, and system media integration.
+- 🎛️ **System Integration:** Lock-screen controls, background playback, and media session support.
 
 ---
 
@@ -86,7 +86,13 @@ Here is a glimpse into the beautiful design and experience of RiftWave Music:
 
 ## 📥 Download
 
-Grab the latest version of RiftWave Music from the [Releases](https://github.com/Pratyush0803/RiftWave-Music/releases) page!
+Grab the latest version of RiftWave Music!
+
+<p align="left">
+  <a href="https://github.com/Pratyush0803/RiftWave-Music/releases">
+    <img src="https://img.shields.io/badge/Get_it_on-GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="Get it on GitHub" height="50">
+  </a>
+</p>
 
 - **Android:** Download the `.apk` file (`RiftWave-Android-arm64.apk` recommended for most modern phones).
 - **Windows:** Download the `RiftWave-Windows.zip` file, extract it, and run the `.exe` inside.
@@ -98,9 +104,19 @@ Grab the latest version of RiftWave Music from the [Releases](https://github.com
 ## 🛠 Installation (Android)
 
 1. Go to the [Releases](https://github.com/Pratyush0803/RiftWave-Music/releases) page.
-2. Download the latest `app-release.apk` file.
+2. Download the appropriate `.apk` file for your device's architecture.
 3. Open the downloaded file. You may be prompted to allow **"Install from unknown sources"**.
 4. Enable the permission, complete the installation, and enjoy the music!
+
+---
+
+## ❓ FAQ
+
+#### 1. Why are some lyrics missing or slightly out of sync?
+Lyrics are provided primarily by **LRCLIB**. Since they rely on community submissions and string matching using the track's duration and title, there can occasionally be mismatches if the song is a remix, a live version, or if the metadata doesn't perfectly align.
+
+#### 2. Where is my data stored?
+Everything is stored **100% locally** on your device using Hive. If you uninstall the app or clear its data, your settings, downloaded songs, and history will be deleted. We have zero access to your information.
 
 ---
 
@@ -118,17 +134,14 @@ If you want to compile the application yourself or contribute to the development
    git clone https://github.com/Pratyush0803/RiftWave-Music.git
    cd RiftWave-Music
    ```
-
 2. **Install dependencies:**
    ```bash
    flutter pub get
    ```
-
 3. **Run the app (Debug Mode):**
    ```bash
    flutter run
    ```
-
 4. **Build a Release APK:**
    ```bash
    flutter build apk --release --split-per-abi
@@ -136,25 +149,32 @@ If you want to compile the application yourself or contribute to the development
 
 ---
 
-## 🔒 Privacy Policy
+## 🤝 Contributing & Translation
 
-RiftWave Music respects your privacy. We believe your data belongs to you.
-- **No Telemetry**: We do not collect any usage data, analytics, or crash reports.
-- **No Accounts**: The app works out of the box anonymously.
-- **Local Storage**: Your search history, library, downloads, and settings are saved purely on your device's local storage using Hive.
-- **API Requests**: The app fetches audio streams and metadata directly from third-party APIs (like YouTube via `youtube_explode_dart` and JioSaavn). These standard network requests are the only external connections made.
+Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**. 
+
+If you want to help translate RiftWave Music into your native language, or if you want to add new features, please fork the repository and open a Pull Request!
 
 ---
 
-## 🤝 Contributing
+## ⚖️ Legal Disclaimer & Terms of Use
 
-Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+### 1. 100% Free, Open-Source & Strictly Non-Commercial
+RiftWave Music is a fully open-source project created purely for educational purposes and personal use. **We do not sell this application, nor do we monetize it in any way.** There are no advertisements, no premium features, no subscriptions, and no hidden fees within the app. This project has absolutely no commercial value or financial intent.
 
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+### 2. A Custom Browser with Content Filtering
+RiftWave Music acts strictly as a specialized, third-party API client. It simply parses the publicly available website content and APIs of external sources (such as YouTube and JioSaavn), rendering them in a custom user interface. The ad-free experience it provides is fundamentally no different from using a standard web browser (like Chrome or Firefox) equipped with a common ad-blocking extension (such as uBlock Origin).
+
+### 3. Support Content Creators
+We deeply respect the hard work of artists, musicians, and content creators. **We strongly encourage all users to subscribe to official premium services (such as YouTube Premium or Spotify Premium).** Purchasing a Premium subscription is the best way to financially support the creators you listen to and ensure the continued growth of the platform. RiftWave Music is built as an educational proof-of-concept for developers and enthusiasts, not to harm creators' revenues.
+
+### 4. No Hosting of Copyrighted Material
+We do not host, upload, distribute, or store any audio, video, or copyrighted media files on our own servers. All content accessed through this application is stored entirely on the respective platform's servers and remains the property of their respective copyright owners. The app merely acts as a conduit to stream publicly accessible links.
+
+### 5. User Responsibility & Legal Contact
+The software is provided "AS IS", without warranty of any kind. The developers of RiftWave Music do not encourage or condone piracy. Users are solely responsible for ensuring their usage of this app complies with their local copyright laws and the Terms of Service of the platforms they access. 
+
+Because we do not host any media files, we cannot process DMCA takedown requests for audio or video content. However, if you represent a copyright holder or have legal concerns regarding the open-source code itself, please open an issue or contact the repository owner.
 
 ---
 
@@ -162,8 +182,7 @@ Contributions are what make the open-source community such an amazing place to l
 
 Distributed under the GPL-3.0 License. See `LICENSE` for more information.
 
----
-
+<br>
 <p align="center">
-  Made with ❤️ by <a href="https://github.com/Pratyush0803">Pratyush0803</a>
+  Made with ❤️ by <a href="https://github.com/Pratyush0803">Pratyush Kumar Jena</a>
 </p>

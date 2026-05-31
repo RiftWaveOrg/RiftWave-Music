@@ -1,3 +1,5 @@
+import 'dart:ui';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_animate/flutter_animate.dart';
@@ -45,17 +47,26 @@ class MiniPlayer extends StatelessWidget {
                           .custom(
                         duration: const Duration(seconds: 4),
                         builder: (context, value, child) {
-                          final xPos1 = -1.2 + (value * 2.4);
-                          final xPos2 = 1.2 - (value * 2.4);
+                          final t = value * math.pi * 2;
+                          
+                          final x1 = math.sin(t) * 1.5;
+                          final y1 = math.cos(t) * 0.5;
+                          
+                          final x2 = math.cos(t * 1.5) * 1.5;
+                          final y2 = math.sin(t * 1.5) * 0.5;
+                          
+                          final x3 = math.sin(t * 0.8) * -1.5;
+                          final y3 = math.cos(t * 0.8) * 0.5;
+
                           return Stack(
                             children: [
                               Container(
                                 decoration: BoxDecoration(
                                   gradient: RadialGradient(
-                                    center: Alignment(xPos1, 0),
-                                    radius: 2.0,
+                                    center: Alignment(x1, y1),
+                                    radius: 2.5,
                                     colors: [
-                                      colorController.playerColors.value.accent.withAlpha(120),
+                                      colorController.playerColors.value.accent.withAlpha(150),
                                       Colors.transparent,
                                     ],
                                     stops: const [0.0, 0.8],
@@ -65,15 +76,32 @@ class MiniPlayer extends StatelessWidget {
                               Container(
                                 decoration: BoxDecoration(
                                   gradient: RadialGradient(
-                                    center: Alignment(xPos2, 0),
-                                    radius: 2.0,
+                                    center: Alignment(x2, y2),
+                                    radius: 2.5,
                                     colors: [
-                                      colorController.playerColors.value.gradientTop.withAlpha(120),
+                                      colorController.playerColors.value.gradientTop.withAlpha(150),
                                       Colors.transparent,
                                     ],
                                     stops: const [0.0, 0.8],
                                   ),
                                 ),
+                              ),
+                              Container(
+                                decoration: BoxDecoration(
+                                  gradient: RadialGradient(
+                                    center: Alignment(x3, y3),
+                                    radius: 2.0,
+                                    colors: [
+                                      colorController.playerColors.value.glowColor.withAlpha(120),
+                                      Colors.transparent,
+                                    ],
+                                    stops: const [0.0, 0.8],
+                                  ),
+                                ),
+                              ),
+                              BackdropFilter(
+                                filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+                                child: Container(color: Colors.transparent),
                               ),
                             ],
                           );

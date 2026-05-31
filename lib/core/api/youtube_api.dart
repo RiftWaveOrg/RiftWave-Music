@@ -260,6 +260,21 @@ class YouTubeApi extends GetxService {
     }
   }
 
+  Future<String?> getChannelThumbnail(String channelName) async {
+    try {
+      final searchResults = await _yt.search.searchContent(channelName);
+      for (final result in searchResults) {
+        if (result is SearchChannel) {
+          // If the channel name matches or is highly relevant, return its thumbnail
+          if (result.thumbnails.isNotEmpty) {
+            return result.thumbnails.last.url.toString();
+          }
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
   Future<List<SongModel>> getRelatedSongs(String videoId) async {
     try {
       final video = await _yt.videos.get(VideoId(videoId));

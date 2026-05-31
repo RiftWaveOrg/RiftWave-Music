@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:ui';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -433,41 +434,69 @@ class _PlayerScreenState extends State<PlayerScreen> with TickerProviderStateMix
                   final pulse = _pulseController.value;
                   final isPlaying = _audioController.isPlaying.value;
                   
-                  final xPos1 = -1.2 + (pulse * 2.4);
-                  final xPos2 = 1.2 - (pulse * 2.4);
+                  // Use sine/cosine for organic, circular motion
+                  final t = pulse * math.pi * 2;
                   
+                  final x1 = math.sin(t) * 1.5;
+                  final y1 = math.cos(t) * 0.5 - 0.5;
+                  
+                  final x2 = math.cos(t * 1.5) * 1.5;
+                  final y2 = math.sin(t * 1.5) * 0.5 - 0.3;
+                  
+                  final x3 = math.sin(t * 0.8) * -1.5;
+                  final y3 = math.cos(t * 0.8) * 0.4 - 0.7;
+
                   return AnimatedOpacity(
                     duration: const Duration(milliseconds: 800),
-                    opacity: isPlaying ? 0.8 : 0.0,
+                    opacity: isPlaying ? 0.7 : 0.0,
                     child: Stack(
                       children: [
-                        // Sweeping Light 1 (Accent Color)
+                        // Main Glow (Accent Color)
                         Container(
                           decoration: BoxDecoration(
                             gradient: RadialGradient(
-                              center: Alignment(xPos1, -0.5),
-                              radius: 1.5,
+                              center: Alignment(x1, y1),
+                              radius: 1.8,
                               colors: [
-                                colors.accent.withAlpha(180),
+                                colors.accent.withAlpha(200),
                                 Colors.transparent,
                               ],
                               stops: const [0.0, 0.8],
                             ),
                           ),
                         ),
-                        // Sweeping Light 2 (Secondary Color)
+                        // Secondary Glow (Gradient Top)
                         Container(
                           decoration: BoxDecoration(
                             gradient: RadialGradient(
-                              center: Alignment(xPos2, -0.3),
-                              radius: 1.6,
+                              center: Alignment(x2, y2),
+                              radius: 1.8,
                               colors: [
-                                colors.gradientTop.withAlpha(150),
+                                colors.gradientTop.withAlpha(180),
                                 Colors.transparent,
                               ],
                               stops: const [0.0, 0.8],
                             ),
                           ),
+                        ),
+                        // Tertiary Glow (Glow Color)
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: RadialGradient(
+                              center: Alignment(x3, y3),
+                              radius: 1.5,
+                              colors: [
+                                colors.glowColor.withAlpha(150),
+                                Colors.transparent,
+                              ],
+                              stops: const [0.0, 0.8],
+                            ),
+                          ),
+                        ),
+                        // Soft Blur Overlay to blend them together seamlessly like an Aurora
+                        BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 50, sigmaY: 50),
+                          child: Container(color: Colors.transparent),
                         ),
                       ],
                     ),
@@ -1361,24 +1390,41 @@ class _PlayerScreenState extends State<PlayerScreen> with TickerProviderStateMix
           ),
           const SizedBox(height: 12),
           Divider(height: 1, color: colors.textSecondary.withAlpha(25)),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Obx(() {
             if (_playerController.isLoadingBio.value) {
               return _loadingPlaceholder(colors);
             }
-            if (_playerController.artistBio.value.isEmpty) {
+            if (_playerController.artistBio.value.isEmpty && _playerController.artistImageUrl.value.isEmpty) {
               return _messagePlaceholder('No biography available.', colors);
             }
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              child: Text(
-                _playerController.artistBio.value,
-                style: TextStyle(
-                  height: 1.6,
-                  color: colors.textSecondary,
-                  fontSize: 14,
-                ),
-              ),
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (_playerController.artistImageUrl.value.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: AspectRatio(
+                        aspectRatio: 1,
+                        child: CachedNetworkImage(
+                          imageUrl: _playerController.artistImageUrl.value,
+                          fit: BoxFit.cover,
+                          errorWidget: (_, __, ___) => const SizedBox.shrink(),
+                        ),
+                      ),
+                    ),
+                  ),
+                if (_playerController.artistBio.value.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: ExpandableBioText(
+                      text: _playerController.artistBio.value,
+                      colors: colors,
+                    ),
+                  ),
+              ],
             );
           }),
         ],
@@ -1422,53 +1468,73 @@ class _PlayerScreenState extends State<PlayerScreen> with TickerProviderStateMix
             if (_playerController.similarSongs.isEmpty) {
               return _messagePlaceholder('No recommendations found.', colors);
             }
-            return ListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              itemCount: _playerController.similarSongs.length,
-              itemBuilder: (context, index) {
-                final song = _playerController.similarSongs[index];
-                return ListTile(
-                  leading: Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      color: colors.accent.withAlpha(20),
+            return SizedBox(
+              height: 190,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                itemCount: _playerController.similarSongs.length,
+                itemBuilder: (context, index) {
+                  final song = _playerController.similarSongs[index];
+                  return GestureDetector(
+                    onTap: () => _audioController.playSong(song),
+                    child: Container(
+                      width: 120,
+                      margin: const EdgeInsets.only(right: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Container(
+                            width: 120,
+                            height: 120,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              color: colors.accent.withAlpha(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withAlpha(20),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                )
+                              ],
+                            ),
+                            clipBehavior: Clip.antiAlias,
+                            child: song.thumbnailUrl.isNotEmpty
+                                ? CachedNetworkImage(
+                                    imageUrl: song.thumbnailUrl,
+                                    fit: BoxFit.cover,
+                                    errorWidget: (_, __, ___) => Icon(Icons.music_note_rounded, color: colors.accent, size: 40),
+                                  )
+                                : Icon(Icons.music_note_rounded, color: colors.accent, size: 40),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            song.title,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 13,
+                              color: colors.textPrimary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            song.artist,
+                            style: TextStyle(
+                              color: colors.textSecondary,
+                              fontSize: 11,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
                     ),
-                    clipBehavior: Clip.antiAlias,
-                    child: song.thumbnailUrl.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: song.thumbnailUrl,
-                            fit: BoxFit.cover,
-                            errorWidget: (_, __, ___) => Icon(Icons.music_note_rounded, color: colors.accent),
-                          )
-                        : Icon(Icons.music_note_rounded, color: colors.accent),
-                  ),
-                  title: Text(
-                    song.title,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w500,
-                      fontSize: 14,
-                      color: colors.textPrimary,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  subtitle: Text(
-                    song.artist,
-                    style: TextStyle(color: colors.textSecondary, fontSize: 12),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  trailing: IconButton(
-                    icon: Icon(Icons.play_circle_outline_rounded, color: colors.accent),
-                    onPressed: () => _audioController.playSong(song),
-                  ),
-                  onTap: () => _audioController.playSong(song),
-                );
-              },
+                  );
+                },
+              ),
             );
           }),
         ],
@@ -1587,6 +1653,54 @@ class _MarqueeTextState extends State<MarqueeText> {
         style: widget.style,
         maxLines: 1,
       ),
+    );
+  }
+}
+
+class ExpandableBioText extends StatefulWidget {
+  final String text;
+  final PlayerColors colors;
+
+  const ExpandableBioText({super.key, required this.text, required this.colors});
+
+  @override
+  State<ExpandableBioText> createState() => _ExpandableBioTextState();
+}
+
+class _ExpandableBioTextState extends State<ExpandableBioText> {
+  bool _isExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          widget.text,
+          maxLines: _isExpanded ? null : 4,
+          overflow: _isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+          style: TextStyle(
+            height: 1.6,
+            color: widget.colors.textSecondary,
+            fontSize: 14,
+          ),
+        ),
+        if (widget.text.length > 150)
+          GestureDetector(
+            onTap: () => setState(() => _isExpanded = !_isExpanded),
+            child: Padding(
+              padding: const EdgeInsets.only(top: 8.0),
+              child: Text(
+                _isExpanded ? 'Read less' : 'Read more',
+                style: TextStyle(
+                  color: widget.colors.accent,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

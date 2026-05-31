@@ -72,7 +72,7 @@ class UpdateController extends GetxController {
       if (response.statusCode == 200) {
         final data = response.data;
         final latestTag = data['tag_name'] as String;
-        final releaseBody = data['body'] as String;
+        final releaseBody = _cleanChangelog((data['body'] as String?) ?? '');
         
         // Remove 'v' from tag if present (e.g. 'v1.2.0' -> '1.2.0')
         final String githubVersion = latestTag.startsWith('v') ? latestTag.substring(1) : latestTag;
@@ -105,6 +105,26 @@ class UpdateController extends GetxController {
     }
   }
 
+  String _cleanChangelog(String body) {
+    String cleaned = body;
+    // Remove the generic GitHub changelog link
+    final idx = cleaned.indexOf('**Full Changelog**:');
+    if (idx != -1) {
+      cleaned = cleaned.substring(0, idx).trim();
+    }
+    
+    // Clean up basic markdown headers and bolding so it looks good in a raw Text widget
+    cleaned = cleaned.replaceAll('## What\'s Changed', 'What\'s Changed:');
+    cleaned = cleaned.replaceAll('**What\'s Changed**', 'What\'s Changed:');
+    cleaned = cleaned.replaceAll('**', ''); // Remove bold markers
+    cleaned = cleaned.replaceAll('##', ''); // Remove other header markers
+    
+    if (cleaned.trim().isEmpty) {
+      return '• Bug fixes and performance improvements.\n• General app optimizations.';
+    }
+    return cleaned.trim();
+  }
+
   Future<bool> checkForUpdatesManual() async {
     try {
       final dio = Dio();
@@ -113,7 +133,7 @@ class UpdateController extends GetxController {
       if (response.statusCode == 200) {
         final data = response.data;
         final latestTag = data['tag_name'] as String;
-        final releaseBody = data['body'] as String;
+        final releaseBody = _cleanChangelog((data['body'] as String?) ?? '');
         
         final String githubVersion = latestTag.startsWith('v') ? latestTag.substring(1) : latestTag;
         final packageInfo = await PackageInfo.fromPlatform();
