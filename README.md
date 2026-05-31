@@ -1,31 +1,42 @@
-<p align="center">
-  <img src="assets/images/RiftWave_Card.png" width="100%" alt="RiftWave Music Banner">
-</p>
+<div align="center">
 
+<img src="assets/images/RiftWave_Card.png" width="100%" alt="RiftWave Music Banner">
 
-<p align="center">
-  <strong>An open-source, beautifully designed, and highly optimized music streaming app.</strong><br>
-  No ads. No tracking. No accounts. Just pure music.
-</p>
+# RiftWave Music
+**An open-source, beautifully designed, and highly optimized music streaming app.**  
+*No ads. No tracking. No accounts. Just pure music.*
 
-<p align="center">
-  <a href="https://flutter.dev"><img src="https://img.shields.io/badge/Platform-Flutter-02569B?logo=flutter&logoColor=white" alt="Built with Flutter"></a>
-  <a href="https://github.com/Pratyush0803/RiftWave-Music/releases"><img src="https://img.shields.io/github/v/release/Pratyush0803/RiftWave-Music?color=success&label=Latest%20Release" alt="Latest Release"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-GPL%20v3-blue.svg" alt="License"></a>
-</p>
+[![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20Windows%20%7C%20Linux%20%7C%20macOS-blue?logo=flutter&logoColor=white)](https://flutter.dev)
+[![GitHub Release](https://img.shields.io/github/v/release/Pratyush0803/RiftWave-Music?color=success&label=Latest%20Release)](https://github.com/Pratyush0803/RiftWave-Music/releases)
+[![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](LICENSE)
+[![GitHub stars](https://img.shields.io/github/stars/Pratyush0803/RiftWave-Music?style=social)](https://github.com/Pratyush0803/RiftWave-Music/stargazers)
 
-<hr>
+[**Download**](#-download) • [**Features**](#-features) • [**Screenshots**](#-screenshots) • [**Installation**](#-installation) • [**Privacy**](#-privacy-policy)
+
+</div>
+
+---
+
+## 🎵 About
+
+**RiftWave Music** is a sleek, completely free, and open-source music streaming application built using Flutter. It aims to provide a premium music streaming experience without the clutter of ads, the intrusion of trackers, or the friction of account sign-ups.
+
+Powered by robust APIs behind the scenes (such as YouTube and JioSaavn), RiftWave delivers high-quality audio, synced lyrics, and native music video playback directly to your device.
+
+---
 
 ## ✨ Features
 
-- 🎵 **Ad-Free Streaming**: Seamless, uninterrupted audio streaming pulling from high-quality sources.
-- 🎨 **Sleek UI & Dynamic Theming**: Beautiful, fully customizable interface featuring true black (AMOLED) and sleek dark modes.
-- 📥 **Offline Downloads**: Download your favorite tracks and play them anywhere, anytime.
-- 🎬 **Music Videos**: Watch music videos natively integrated directly within the player.
-- 📂 **Local Storage**: All history, favorites, and settings stay completely on your device.
-- 📝 **Live Lyrics**: Follow along with synced lyrics support.
-- 🔁 **Continuous Playback**: Background play, lock-screen controls, and gapless support.
-- 🚀 **Cross-Platform**: Available for Android (APK), and fully capable on Windows and Linux!
+- 🚫 **Ad-Free Experience:** Uninterrupted listening, forever.
+- 🎨 **Material You & Dynamic Theming:** Beautiful UI that adapts to your device's wallpaper, featuring True Black (AMOLED) and sleek dark modes.
+- 📥 **Offline Downloads:** Cache and download your favorite tracks directly to your local storage to listen anywhere, anytime.
+- 🎬 **Music Video Mode (Beta):** Watch HD music videos natively integrated directly within the player.
+- 📝 **Live Synced Lyrics:** Follow along with your favorite songs using real-time synchronized lyrics.
+- 🔁 **Gapless Playback:** Seamless transition between tracks for the perfect album listening experience.
+- 📱 **Cross-Platform Support:** Available for Android, Windows, Linux, and macOS.
+- 🔒 **Privacy First:** Your data stays on your device. No telemetry, no usage tracking, no cloud accounts.
+- 📻 **Smart Recommendations:** Auto-play similar tracks to keep the music going based on your listening history.
+- 🎛️ **Audio Controls:** Lock-screen controls, background playback, and system media integration.
 
 ---
 
@@ -45,7 +56,7 @@ Here is a glimpse into the beautiful design and experience of RiftWave Music:
 </p>
 
 <details>
-<summary><b>View More Screenshots</b></summary>
+<summary><b>🔥 Click to view more screenshots</b></summary>
 <br>
 
 <p align="center">
@@ -73,65 +84,86 @@ Here is a glimpse into the beautiful design and experience of RiftWave Music:
 
 ---
 
-## 📥 Installation
+## 📥 Download
 
-### Android
-1. Go to the [Releases](https://github.com/Pratyush0803/RiftWave-Music/releases) page.
-2. Download the latest `app-release.apk` file.
-3. Install the APK on your device (you may need to enable "Install from unknown sources" in your settings).
+Grab the latest version of RiftWave Music from the [Releases](https://github.com/Pratyush0803/RiftWave-Music/releases) page!
 
-### Windows / Linux / macOS
-RiftWave supports desktop platforms out of the box using Flutter's native desktop rendering.
-Currently, desktop builds are compiled locally. See **Building from Source** below.
+- **Android:** Download the `.apk` file (`app-arm64-v8a-release.apk` recommended for most modern phones).
+- **Windows:** Download the `.zip` file, extract it, and run `riftwave_music.exe`.
+- **Linux:** Download the `.tar.gz` bundle.
+- **macOS:** Download the `.zip` bundle.
 
 ---
 
-## 🛠 Building from Source
+## 🛠 Installation (Android)
 
-To build and run RiftWave yourself, you need to have [Flutter](https://flutter.dev/docs/get-started/install) installed.
+1. Go to the [Releases](https://github.com/Pratyush0803/RiftWave-Music/releases) page.
+2. Download the latest `app-release.apk` file.
+3. Open the downloaded file. You may be prompted to allow **"Install from unknown sources"**.
+4. Enable the permission, complete the installation, and enjoy the music!
 
+---
+
+## 👨‍💻 Building from Source
+
+If you want to compile the application yourself or contribute to the development, follow these steps:
+
+### Prerequisites
+- Install [Flutter](https://flutter.dev/docs/get-started/install) (Ensure it's added to your system PATH).
+- Install Android Studio (for Android builds) or Visual Studio (for Windows builds).
+
+### Steps
 1. **Clone the repository:**
    ```bash
    git clone https://github.com/Pratyush0803/RiftWave-Music.git
    cd RiftWave-Music
    ```
 
-2. **Fetch dependencies:**
+2. **Install dependencies:**
    ```bash
    flutter pub get
    ```
 
-3. **Run the app:**
+3. **Run the app (Debug Mode):**
    ```bash
    flutter run
    ```
 
-4. **Build APK for Android:**
+4. **Build a Release APK:**
    ```bash
-   flutter build apk --release
+   flutter build apk --release --split-per-abi
    ```
 
 ---
 
 ## 🔒 Privacy Policy
 
-RiftWave Music is entirely open-source and respects your privacy.
+RiftWave Music respects your privacy. We believe your data belongs to you.
 - **No Telemetry**: We do not collect any usage data, analytics, or crash reports.
-- **No Accounts**: The app works out of the box completely anonymously.
-- **Local Storage**: Your search history, playlists, and settings are saved locally on your device. We do not have access to them.
-- **APIs**: The app fetches audio data and metadata directly from third-party APIs (like YouTube and JioSaavn). Those standard network requests are the only external connections made by the app.
+- **No Accounts**: The app works out of the box anonymously.
+- **Local Storage**: Your search history, library, downloads, and settings are saved purely on your device's local storage using Hive.
+- **API Requests**: The app fetches audio streams and metadata directly from third-party APIs (like YouTube via `youtube_explode_dart` and JioSaavn). These standard network requests are the only external connections made.
 
 ---
 
 ## 🤝 Contributing
 
-Contributions, issues, and feature requests are always welcome! Feel free to check out the [Issues](https://github.com/Pratyush0803/RiftWave-Music/issues) page if you'd like to help improve RiftWave.
+Contributions are what make the open-source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+
+1. Fork the Project
+2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the Branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+---
 
 ## 📄 License
 
-This project is licensed under the GPL-3.0 License. See the [LICENSE](LICENSE) file for details.
+Distributed under the GPL-3.0 License. See `LICENSE` for more information.
 
-<br>
+---
+
 <p align="center">
   Made with ❤️ by <a href="https://github.com/Pratyush0803">Pratyush0803</a>
 </p>
