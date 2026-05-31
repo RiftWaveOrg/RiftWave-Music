@@ -403,7 +403,7 @@ class _PlayerScreenState extends State<PlayerScreen> with TickerProviderStateMix
         backgroundColor: Colors.transparent,
         body: Stack(
           children: [
-            // Base background
+            
             AnimatedContainer(
               duration: const Duration(milliseconds: 600),
               curve: Curves.easeInOut,
@@ -422,7 +422,7 @@ class _PlayerScreenState extends State<PlayerScreen> with TickerProviderStateMix
               ),
             ),
             
-            // Sweeping Ambient Light Effect
+            
             Obx(() {
               if (!_settingsController.ambientLightEnabled.value) {
                 return const SizedBox.shrink();
@@ -434,7 +434,7 @@ class _PlayerScreenState extends State<PlayerScreen> with TickerProviderStateMix
                   final pulse = _pulseController.value;
                   final isPlaying = _audioController.isPlaying.value;
                   
-                  // Use sine/cosine for organic, circular motion
+                  
                   final t = pulse * math.pi * 2;
                   
                   final x1 = math.sin(t) * 1.5;
@@ -451,7 +451,7 @@ class _PlayerScreenState extends State<PlayerScreen> with TickerProviderStateMix
                     opacity: isPlaying ? 0.7 : 0.0,
                     child: Stack(
                       children: [
-                        // Main Glow (Accent Color)
+                        
                         Container(
                           decoration: BoxDecoration(
                             gradient: RadialGradient(
@@ -465,7 +465,7 @@ class _PlayerScreenState extends State<PlayerScreen> with TickerProviderStateMix
                             ),
                           ),
                         ),
-                        // Secondary Glow (Gradient Top)
+                        
                         Container(
                           decoration: BoxDecoration(
                             gradient: RadialGradient(
@@ -479,7 +479,7 @@ class _PlayerScreenState extends State<PlayerScreen> with TickerProviderStateMix
                             ),
                           ),
                         ),
-                        // Tertiary Glow (Glow Color)
+                        
                         Container(
                           decoration: BoxDecoration(
                             gradient: RadialGradient(
@@ -493,7 +493,7 @@ class _PlayerScreenState extends State<PlayerScreen> with TickerProviderStateMix
                             ),
                           ),
                         ),
-                        // Soft Blur Overlay to blend them together seamlessly like an Aurora
+                        
                         BackdropFilter(
                           filter: ImageFilter.blur(sigmaX: 50, sigmaY: 50),
                           child: Container(color: Colors.transparent),
@@ -505,7 +505,7 @@ class _PlayerScreenState extends State<PlayerScreen> with TickerProviderStateMix
               );
             }),
 
-            // Content
+            
             SafeArea(
               child: SingleChildScrollView(
                 controller: _pageScrollController,
@@ -723,7 +723,7 @@ class _PlayerScreenState extends State<PlayerScreen> with TickerProviderStateMix
                           controls: NoVideoControls,
                           fit: BoxFit.contain,
                         ),
-                        // YouTube-like buffering overlay — shows during mid-playback buffering
+                        
                         Obx(() {
                           final isMidPlaybackBuffering = _audioController.isPlaying.value && _audioController.isBuffering.value;
                           if (!isMidPlaybackBuffering) return const SizedBox.shrink();
@@ -758,7 +758,7 @@ class _PlayerScreenState extends State<PlayerScreen> with TickerProviderStateMix
                   ),
                 );
               }
-              // Video is loading but not ready yet — show album art with loading overlay
+              
               if (videoController.isVideoLoading.value) {
                 return Stack(
                   fit: StackFit.expand,

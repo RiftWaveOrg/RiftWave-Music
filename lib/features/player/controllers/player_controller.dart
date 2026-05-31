@@ -90,7 +90,7 @@ class PlayerController extends GetxController {
         debugPrint('PlayerController._fetchArtistBio JioSaavn Error: $e');
       }
 
-      // Fallback for image: YouTube
+      
       if (artistImageUrl.value.isEmpty) {
         try {
           final yt = Get.find<YouTubeApi>();
@@ -105,7 +105,7 @@ class PlayerController extends GetxController {
         }
       }
 
-      // Fallback for bio: Last.fm
+      
       if (artistBio.value.isEmpty) {
         try {
           final lastfm = Get.find<LastFmApi>();

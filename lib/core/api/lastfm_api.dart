@@ -152,8 +152,17 @@ class LastFmApi extends GetxService {
         return '';
       }
 
-      final String content = bio['content'] as String? ?? bio['summary'] as String? ?? '';
+      String content = bio['content'] as String? ?? bio['summary'] as String? ?? '';
       debugPrint('LastFmApi.getArtistBio: successfully fetched bio, length=${content.length}');
+
+      if (content.contains('There is more than one artist with this name')) {
+        final match = RegExp(r'1\)\s*([\s\S]*?)(?=\n\n2\)|$)').firstMatch(content);
+        if (match != null && match.groupCount >= 1) {
+          content = match.group(1)!;
+        } else {
+          content = '';
+        }
+      }
 
       return content.replaceAll(RegExp(r'<[^>]*>|Read more on Last.fm.*'), '').trim();
     } on DioException catch (e) {

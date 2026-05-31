@@ -74,7 +74,7 @@ class UpdateController extends GetxController {
         final latestTag = data['tag_name'] as String;
         final releaseBody = _cleanChangelog((data['body'] as String?) ?? '');
         
-        // Remove 'v' from tag if present (e.g. 'v1.2.0' -> '1.2.0')
+        
         final String githubVersion = latestTag.startsWith('v') ? latestTag.substring(1) : latestTag;
         
         final packageInfo = await PackageInfo.fromPlatform();
@@ -88,7 +88,7 @@ class UpdateController extends GetxController {
             latestVersion.value = latestTag;
             changelog.value = releaseBody;
             
-            // Find APK asset
+            
             final assets = data['assets'] as List<dynamic>;
             final matchUrl = await _findMatchingApkUrl(assets);
             if (matchUrl != null) {
@@ -107,17 +107,17 @@ class UpdateController extends GetxController {
 
   String _cleanChangelog(String body) {
     String cleaned = body;
-    // Remove the generic GitHub changelog link
+    
     final idx = cleaned.indexOf('**Full Changelog**:');
     if (idx != -1) {
       cleaned = cleaned.substring(0, idx).trim();
     }
     
-    // Clean up basic markdown headers and bolding so it looks good in a raw Text widget
+    
     cleaned = cleaned.replaceAll('## What\'s Changed', 'What\'s Changed:');
     cleaned = cleaned.replaceAll('**What\'s Changed**', 'What\'s Changed:');
-    cleaned = cleaned.replaceAll('**', ''); // Remove bold markers
-    cleaned = cleaned.replaceAll('##', ''); // Remove other header markers
+    cleaned = cleaned.replaceAll('**', ''); 
+    cleaned = cleaned.replaceAll('##', ''); 
     
     if (cleaned.trim().isEmpty) {
       return '• Bug fixes and performance improvements.\n• General app optimizations.';
@@ -163,7 +163,7 @@ class UpdateController extends GetxController {
     List<int> currParts = current.split('.').map((s) => int.tryParse(s) ?? 0).toList();
     List<int> latestParts = latest.split('.').map((s) => int.tryParse(s) ?? 0).toList();
     
-    // pad to same length
+    
     while (currParts.length < 3) currParts.add(0);
     while (latestParts.length < 3) latestParts.add(0);
     
@@ -181,7 +181,7 @@ class UpdateController extends GetxController {
   }
 
   Future<void> startUpdate() async {
-    // Fallback for Web and Desktop (Windows, macOS, Linux)
+    
     if (kIsWeb || Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
       final Uri githubUrl = Uri.parse('https://github.com/Pratyush0803/RiftWave-Music/releases/latest');
       if (await canLaunchUrl(githubUrl)) {

@@ -5,6 +5,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:riftwave_music/core/models/region.dart';
+import 'package:riftwave_music/core/api/youtube_api.dart';
 
 enum ThemeVariant { dark, amoled }
 
@@ -25,6 +26,10 @@ class SettingsController extends GetxController {
   final RxString videoQuality = 'Auto'.obs;
   final RxBool hasSeenDataWarning = false.obs;
   final RxBool ambientLightEnabled = false.obs;
+  final RxBool isYouTubeLoggedIn = false.obs;
+  final RxString ytAvatarUrl = ''.obs;
+  final RxString ytAccountName = ''.obs;
+  final RxString ytAccountHandle = ''.obs;
 
   @override
   void onInit() {
@@ -67,6 +72,12 @@ class SettingsController extends GetxController {
     videoQuality.value = prefs.getString(_videoQualityKey) ?? 'Auto';
     hasSeenDataWarning.value = prefs.getBool(_dataWarningKey) ?? false;
     ambientLightEnabled.value = prefs.getBool(_ambientLightKey) ?? false;
+
+    final ytCookies = prefs.getString('yt_cookies') ?? '';
+    isYouTubeLoggedIn.value = ytCookies.isNotEmpty;
+    ytAvatarUrl.value = prefs.getString('yt_avatar_url') ?? '';
+    ytAccountName.value = prefs.getString('yt_account_name') ?? '';
+    ytAccountHandle.value = prefs.getString('yt_account_handle') ?? '';
   }
 
   String _detectRegionFromLocale() {
@@ -123,6 +134,13 @@ class SettingsController extends GetxController {
     await prefs.setBool(_ambientLightKey, enabled);
   }
 
+  void setYouTubeLoggedIn(bool loggedIn, {String? avatarUrl}) {
+    isYouTubeLoggedIn.value = loggedIn;
+    if (avatarUrl != null) {
+      ytAvatarUrl.value = avatarUrl;
+    }
+  }
+
   Future<void> requestBackgroundActivity() async {
     try {
       final status = await Permission.ignoreBatteryOptimizations.status;
@@ -151,6 +169,22 @@ class SettingsController extends GetxController {
         colorText: const Color(0xFFFFFFFF),
         margin: const EdgeInsets.all(16),
       );
+    }
+  }
+
+  Future<void> reloadYouTubeState() async {
+    await _loadSettings();
+  }
+
+  Future<void> logoutYouTube() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('yt_cookies');
+    await prefs.remove('yt_avatar_url');
+    await prefs.remove('yt_account_name');
+    await prefs.remove('yt_account_handle');
+    await _loadSettings();
+    if (Get.isRegistered<YouTubeApi>()) {
+      await Get.find<YouTubeApi>().reloadCookies();
     }
   }
 

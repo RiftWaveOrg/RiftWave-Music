@@ -4,8 +4,46 @@ import 'package:youtube_explode_dart/youtube_explode_dart.dart';
 import 'package:riftwave_music/core/api/exceptions/api_exceptions.dart';
 import 'package:riftwave_music/core/database/models/song_model.dart';
 
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
+class CookieHttpClient extends http.BaseClient {
+  final http.Client _inner = http.Client();
+  final String cookies;
+
+  CookieHttpClient(this.cookies);
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) {
+    request.headers['User-Agent'] = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36';
+    if (cookies.isNotEmpty) {
+      final existingCookies = request.headers['cookie'] ?? '';
+      request.headers['cookie'] = '$cookies; $existingCookies';
+    }
+    return _inner.send(request);
+  }
+}
+
 class YouTubeApi extends GetxService {
-  final YoutubeExplode _yt = YoutubeExplode();
+  late YoutubeExplode _yt;
+  String currentCookies = '';
+
+  @override
+  void onInit() {
+    super.onInit();
+    _initYt();
+  }
+
+  Future<void> _initYt() async {
+    final prefs = await SharedPreferences.getInstance();
+    currentCookies = prefs.getString('yt_cookies') ?? '';
+    _yt = YoutubeExplode();
+  }
+
+  Future<void> reloadCookies() async {
+    _yt.close();
+    await _initYt();
+  }
 
   @override
   void onClose() {
@@ -265,7 +303,7 @@ class YouTubeApi extends GetxService {
       final searchResults = await _yt.search.searchContent(channelName);
       for (final result in searchResults) {
         if (result is SearchChannel) {
-          // If the channel name matches or is highly relevant, return its thumbnail
+          
           if (result.thumbnails.isNotEmpty) {
             return result.thumbnails.last.url.toString();
           }
@@ -324,16 +362,16 @@ class YouTubeApi extends GetxService {
   Future<List<String>> getSearchSuggestions(String query) async {
     try {
       if (query.trim().isEmpty) return [];
-      // Append " song" to force YouTube to return music-related suggestions
+      
       final suggestions = await _yt.search.getQuerySuggestions('$query song');
       
       return suggestions.map((s) {
-        // Clean up the " song" suffix if it exists so it looks natural to the user
+        
         if (s.toLowerCase().endsWith(' song')) {
           return s.substring(0, s.length - 5).trim();
         }
         return s;
-      }).toSet().toList(); // Remove duplicates
+      }).toSet().toList(); 
     } catch (e) {
       print('YouTube Suggestions Error: $e');
       return [];

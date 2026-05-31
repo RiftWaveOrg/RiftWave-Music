@@ -93,11 +93,56 @@ class LyricsController extends GetxController {
 
       _updateActiveLineIndex(_audioController.currentPosition.value);
     } catch (e) {
-      plainLyrics.value = '';
-      hasSyncedLyrics.value = false;
-      debugPrint('LyricsController: Error fetching lyrics: $e');
+      debugPrint('LyricsController: LrcLib fetch failed ($e). Attempting fallback...');
+      await _fetchLyricsFallback(song);
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  
+  
+  String _cleanTitle(String title) {
+    
+    String cleaned = title;
+    final patterns = [
+      RegExp(r'\s*[\(\[](official\s*(music\s*)?video|official\s*audio|lyrics?\s*video|audio|lyric|hd|hq|4k|visualizer|visualiser|animated\s*video|slowed\s*\+?\s*reverb)[\)\]]', caseSensitive: false),
+      RegExp(r'\s*[\(\[]feat\.?[^\)\]]*[\)\]]', caseSensitive: false),
+      RegExp(r'\s*[\(\[]ft\.?[^\)\]]*[\)\]]', caseSensitive: false),
+      RegExp(r'\s*[\(\[]prod\.?[^\)\]]*[\)\]]', caseSensitive: false),
+      RegExp(r'\s*[\(\[]from\s+"[^"]*"[^\)\]]*[\)\]]', caseSensitive: false),
+      RegExp(r'\s*\|\s*.*$', caseSensitive: false),
+      RegExp(r'\s+ft\.?\s+.*$', caseSensitive: false),
+      RegExp(r'\s+feat\.?\s+.*$', caseSensitive: false),
+    ];
+    for (final pattern in patterns) {
+      cleaned = cleaned.replaceAll(pattern, '');
+    }
+    return cleaned.trim();
+  }
+
+  Future<void> _fetchLyricsFallback(SongModel song) async {
+    try {
+      final dio = Get.find<LrcLibApi>().getDioForFallback();
+      final cleanedTitle = _cleanTitle(song.title);
+      final encodedArtist = Uri.encodeComponent(song.artist);
+      final encodedTitle = Uri.encodeComponent(cleanedTitle);
+      debugPrint('LyricsController: OVH fallback query: artist="${song.artist}", title="$cleanedTitle"');
+      final res = await dio.get('https://api.lyrics.ovh/v1/$encodedArtist/$encodedTitle');
+      
+      final lyrics = res.data['lyrics'] as String?;
+      if (lyrics != null && lyrics.isNotEmpty) {
+        plainLyrics.value = lyrics;
+        hasSyncedLyrics.value = false;
+        debugPrint('LyricsController: Successfully fetched fallback lyrics from OVH.');
+      } else {
+        plainLyrics.value = '';
+        hasSyncedLyrics.value = false;
+      }
+    } catch (e) {
+      plainLyrics.value = '';
+      hasSyncedLyrics.value = false;
+      debugPrint('LyricsController: All lyrics fallbacks failed ($e).');
     }
   }
 
