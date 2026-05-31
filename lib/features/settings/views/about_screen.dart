@@ -25,7 +25,7 @@ class AboutScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 32),
-            Image.asset('assets/images/logo.png', width: 100, height: 100),
+            Image.asset('assets/images/RiftWave_logo.png', width: 100, height: 100),
             const SizedBox(height: 24),
             Text(
               'RiftWave Music',
