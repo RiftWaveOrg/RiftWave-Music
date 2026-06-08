@@ -409,6 +409,16 @@ class AudioPlayerController extends GetxController {
     _persistQueue();
   }
 
+  void playNext(SongModel song) {
+    if (queue.isEmpty) {
+      playSong(song);
+      return;
+    }
+    queue.insert(currentQueueIndex.value + 1, song);
+    _resetShuffleIndices();
+    _persistQueue();
+  }
+
   Future<void> playAll(List<SongModel> songs, {int startIndex = 0}) async {
     if (songs.isEmpty) return;
     queue.assignAll(songs);

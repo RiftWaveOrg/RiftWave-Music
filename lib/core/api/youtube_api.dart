@@ -58,7 +58,7 @@ class YouTubeApi extends GetxService {
 
       for (final video in searchList) {
         final duration = video.duration?.inMilliseconds ?? 0;
-        if (duration < 60000 || duration > 900000) {
+        if (duration < 60000 || duration > 7200000) {
           continue;
         }
         songs.add(

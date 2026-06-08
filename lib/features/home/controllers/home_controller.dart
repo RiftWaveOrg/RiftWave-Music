@@ -2,24 +2,23 @@ import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:hive/hive.dart';
 import 'package:riftwave_music/core/database/models/song_model.dart';
-import 'package:riftwave_music/core/api/saavn_api.dart';
 import 'package:riftwave_music/core/api/youtube_api.dart';
-import 'package:riftwave_music/core/services/recommendation_engine.dart';
 import 'package:riftwave_music/features/library/controllers/library_controller.dart';
 import 'package:riftwave_music/features/settings/controllers/settings_controller.dart';
-import 'package:riftwave_music/shared/controllers/update_controller.dart';
 
 class HomeController extends GetxController {
+  final RxString currentMood = 'All'.obs;
+
   final RxList<SongModel> trendingSongs = <SongModel>[].obs;
   final RxList<SongModel> recentlyPlayed = <SongModel>[].obs;
-  final RxList<Map<String, dynamic>> newReleases = <Map<String, dynamic>>[].obs;
   final RxList<Map<String, dynamic>> popularPlaylists = <Map<String, dynamic>>[].obs;
-  final RxList<Map<String, dynamic>> youtubePlaylists = <Map<String, dynamic>>[].obs;
-  final RxList<SongModel> youtubeTrending = <SongModel>[].obs;
-
-  final RxList<SongModel> dailyMix = <SongModel>[].obs;
-  final RxList<SongModel> regionalCharts = <SongModel>[].obs;
-  final RxList<Map<String, dynamic>> regionalArtists = <Map<String, dynamic>>[].obs;
+  final RxList<SongModel> quickPicks = <SongModel>[].obs;
+  final RxList<SongModel> recommendedVideos = <SongModel>[].obs;
+  final RxList<SongModel> forgottenFavorites = <SongModel>[].obs;
+  final RxList<SongModel> similarToArtistSongs = <SongModel>[].obs;
+  final RxList<SongModel> mixedForYou = <SongModel>[].obs;
+  final RxList<SongModel> mashupSongs = <SongModel>[].obs;
+  final RxString similarArtistName = ''.obs;
 
   final RxBool isLoading = false.obs;
   final RxBool isDiscoveryLoading = false.obs;
@@ -37,7 +36,7 @@ class HomeController extends GetxController {
 
     ever<String>(
       Get.find<SettingsController>().regionCode,
-      (_) => _refreshDiscoverySections(),
+      (_) => refreshData(),
     );
   }
 
@@ -59,41 +58,15 @@ class HomeController extends GetxController {
       } else {
         _cacheBox = Hive.box(_cacheBoxName);
       }
-
-      final cachedTrending = _cacheBox.get('trending_songs');
-      if (cachedTrending is List) {
-        trendingSongs.assignAll(cachedTrending.cast<SongModel>());
-      }
-
-      final cachedReleases = _cacheBox.get('new_releases');
-      if (cachedReleases is List) {
-        newReleases.assignAll(cachedReleases.map((e) => Map<String, dynamic>.from(e)).toList());
-      }
-
-      final cachedPlaylists = _cacheBox.get('popular_playlists');
-      if (cachedPlaylists is List) {
-        popularPlaylists.assignAll(cachedPlaylists.map((e) => Map<String, dynamic>.from(e)).toList());
-      }
-
-      final cachedYtPlaylists = _cacheBox.get('youtube_playlists');
-      if (cachedYtPlaylists is List) {
-        youtubePlaylists.assignAll(cachedYtPlaylists.map((e) => Map<String, dynamic>.from(e)).toList());
-      }
-
-      final cachedYtTrending = _cacheBox.get('youtube_trending');
-      if (cachedYtTrending is List) {
-        youtubeTrending.assignAll(cachedYtTrending.cast<SongModel>());
-      }
-
       _loadLocalHistory();
 
-      if (trendingSongs.isEmpty && newReleases.isEmpty && popularPlaylists.isEmpty && youtubePlaylists.isEmpty) {
+      if (quickPicks.isEmpty && trendingSongs.isEmpty) {
         isLoading.value = true;
       }
 
       refreshData();
     } catch (e) {
-      debugPrint('HomeController: Cache load failed: $e');
+      debugPrint('HomeController: Cache load failed: ');
       isLoading.value = true;
       refreshData();
     }
@@ -106,221 +79,105 @@ class HomeController extends GetxController {
         recentlyPlayed.assignAll(library.history);
       }
     } catch (e) {
-      debugPrint('HomeController: Failed to load local history: $e');
+      debugPrint('HomeController: Failed to load local history: ');
     }
   }
 
+  void changeMood(String mood) {
+    if (currentMood.value == mood) return;
+    currentMood.value = mood;
+    refreshData();
+  }
+
   Future<void> refreshData() async {
+    isLoading.value = true;
     errorMessage.value = '';
     _updateGreeting();
     _loadLocalHistory();
 
     try {
-      final saavn = Get.find<SaavnApi>();
       final ytApi = Get.find<YouTubeApi>();
       final region = Get.find<SettingsController>().currentRegion;
+      final moodSuffix = currentMood.value == 'All' ? '' : '${currentMood.value} ';
+      
+      final trendingQuery = moodSuffix.isEmpty ? region.youtubeQuery : '${moodSuffix}trending music songs ${region.name}';
+      final playlistQuery = moodSuffix.isEmpty ? 'popular music playlist ${region.name}' : '${moodSuffix}music playlist';
+      final mixQuery = moodSuffix.isEmpty ? 'music song mix ${region.name}' : '${moodSuffix}song mix';
+      final videoQuery = moodSuffix.isEmpty ? 'official music video hit song ${region.name}' : 'official music video song $moodSuffix';
+      final hitsQuery = moodSuffix.isEmpty ? 'latest hit songs ${region.name}' : 'latest hit songs $moodSuffix';
+      final mashupQuery = moodSuffix.isEmpty ? 'best music mashups ${region.name}' : '${moodSuffix}music mashups';
 
       final results = await Future.wait([
-        saavn.getCharts().catchError((e) {
-          debugPrint('HomeController: Failed to fetch charts: $e');
-          return <SongModel>[];
-        }),
-        saavn.getNewReleases(language: region.saavnLanguage).catchError((e) {
-          debugPrint('HomeController: Failed to fetch new releases: $e');
-          return <Map<String, dynamic>>[];
-        }),
-        saavn.getPopularPlaylists(language: region.saavnLanguage).catchError((e) {
-          debugPrint('HomeController: Failed to fetch popular playlists: $e');
-          return <Map<String, dynamic>>[];
-        }),
-        ytApi.getPopularPlaylists('${region.youtubeQuery} playlist').catchError((e) {
-          debugPrint('HomeController: Failed to fetch YouTube playlists: $e');
-          return <Map<String, dynamic>>[];
-        }),
-        ytApi.getTrending(region.youtubeQuery).catchError((e) {
-          debugPrint('HomeController: Failed to fetch YouTube trending: $e');
-          return <SongModel>[];
-        }),
+        ytApi.getTrending(trendingQuery).catchError((_) => <SongModel>[]),
+        ytApi.getPopularPlaylists(playlistQuery).catchError((_) => <Map<String, dynamic>>[]),
+        ytApi.search(mixQuery).catchError((_) => <SongModel>[]),
+        ytApi.search(videoQuery).catchError((_) => <SongModel>[]),
+        ytApi.search(hitsQuery).catchError((_) => <SongModel>[]),
+        ytApi.search(mashupQuery).catchError((_) => <SongModel>[]),
       ]);
 
       final freshTrending = results[0] as List<SongModel>;
-      final freshReleases = results[1] as List<Map<String, dynamic>>;
-      final freshPlaylists = results[2] as List<Map<String, dynamic>>;
-      final freshYtPlaylists = results[3] as List<Map<String, dynamic>>;
-      final freshYtTrending = results[4] as List<SongModel>;
+      final freshPlaylists = results[1] as List<Map<String, dynamic>>;
+      final freshMix = results[2] as List<SongModel>;
+      final freshVideos = results[3] as List<SongModel>;
+      final freshHits = results[4] as List<SongModel>;
+      final freshMashups = results[5] as List<SongModel>;
 
-      if (freshTrending.isNotEmpty) {
-        trendingSongs.assignAll(freshTrending);
-        await _cacheBox.put('trending_songs', freshTrending);
+      trendingSongs.assignAll(freshTrending);
+      popularPlaylists.assignAll(freshPlaylists);
+      mixedForYou.assignAll(freshMix.isNotEmpty ? freshMix : freshHits);
+      recommendedVideos.assignAll(freshVideos);
+      mashupSongs.assignAll(freshMashups);
+
+      // Synthesize Quick Picks (16 items)
+      final List<SongModel> qpPool = [...freshHits, ...freshMix, ...recentlyPlayed];
+      qpPool.shuffle();
+      final uniqueQp = <String, SongModel>{};
+      for (final s in qpPool) {
+        if (!uniqueQp.containsKey(s.title)) uniqueQp[s.title] = s;
+        if (uniqueQp.length >= 16) break;
+      }
+      quickPicks.assignAll(uniqueQp.values.toList());
+
+      // Synthesize Forgotten Favorites
+      if (recentlyPlayed.length > 5) {
+        final older = recentlyPlayed.reversed.take(15).toList();
+        older.shuffle();
+        forgottenFavorites.assignAll(older);
+      } else {
+        forgottenFavorites.clear();
       }
 
-      if (freshReleases.isNotEmpty) {
-        newReleases.assignAll(freshReleases);
-        await _cacheBox.put('new_releases', freshReleases);
+      // Synthesize Similar to Artist
+      if (recentlyPlayed.isNotEmpty) {
+        final randomSongs = recentlyPlayed.toList()..shuffle();
+        String chosenArtist = '';
+        for (final s in randomSongs) {
+          final a = s.artist.split(',').first.trim();
+          if (a.isNotEmpty && a.toLowerCase() != 'unknown artist') {
+            chosenArtist = a;
+            break;
+          }
+        }
+        if (chosenArtist.isNotEmpty) {
+          similarArtistName.value = chosenArtist;
+          final similar = await ytApi.search('similar to $chosenArtist $moodSuffix').catchError((_) => <SongModel>[]);
+          similarToArtistSongs.assignAll(similar);
+        } else {
+          similarToArtistSongs.clear();
+          similarArtistName.value = '';
+        }
+      } else {
+        similarToArtistSongs.clear();
+        similarArtistName.value = '';
       }
 
-      if (freshPlaylists.isNotEmpty) {
-        popularPlaylists.assignAll(freshPlaylists);
-        await _cacheBox.put('popular_playlists', freshPlaylists);
-      }
-
-      if (freshYtPlaylists.isNotEmpty) {
-        youtubePlaylists.assignAll(freshYtPlaylists);
-        await _cacheBox.put('youtube_playlists', freshYtPlaylists);
-      }
-
-      if (freshYtTrending.isNotEmpty) {
-        youtubeTrending.assignAll(freshYtTrending);
-        await _cacheBox.put('youtube_trending', freshYtTrending);
-      }
     } catch (e) {
-      debugPrint('HomeController: Parallel refresh failed: $e');
-      if (trendingSongs.isEmpty && newReleases.isEmpty) {
-        errorMessage.value = 'Failed to load content. Pull to retry.';
-      }
+      debugPrint('HomeController: Refresh failed: ');
+      errorMessage.value = 'Failed to load content. Pull to retry.';
     } finally {
       isLoading.value = false;
-    }
-
-    _refreshDiscoverySections();
-  }
-
-  Future<void> _refreshDiscoverySections() async {
-    isDiscoveryLoading.value = true;
-    try {
-      final engine = Get.find<RecommendationEngine>();
-      final settings = Get.find<SettingsController>();
-      final region = settings.currentRegion;
-      _loadLocalHistory();
-      final history = List<SongModel>.from(recentlyPlayed);
-
-      final results = await Future.wait([
-        engine.getDailyMix(region: region, history: history).catchError((e) {
-          debugPrint('HomeController: Daily mix failed: $e');
-          return <SongModel>[];
-        }),
-        engine.getRegionalCharts(region).catchError((e) {
-          debugPrint('HomeController: Regional charts failed: $e');
-          return <SongModel>[];
-        }),
-        engine.getRegionalArtists(region).catchError((e) {
-          debugPrint('HomeController: Regional artists failed: $e');
-          return <Map<String, dynamic>>[];
-        }),
-      ]);
-
-      final freshDailyMix = results[0] as List<SongModel>;
-      final freshRegionalCharts = results[1] as List<SongModel>;
-      final freshRegionalArtists = results[2] as List<Map<String, dynamic>>;
-
-      if (freshDailyMix.isNotEmpty) dailyMix.assignAll(freshDailyMix);
-      if (freshRegionalCharts.isNotEmpty) regionalCharts.assignAll(freshRegionalCharts);
-      if (freshRegionalArtists.isNotEmpty) regionalArtists.assignAll(freshRegionalArtists);
-    } catch (e) {
-      debugPrint('HomeController: Discovery refresh failed: $e');
-    } finally {
       isDiscoveryLoading.value = false;
     }
-  }
-
-  Future<List<Map<String, dynamic>>> _fetchRecommendedArtists() async {
-    try {
-      final historySongs = recentlyPlayed;
-      if (historySongs.isEmpty) {
-        return await _getPopularArtistsFallback();
-      }
-
-      final Map<String, int> artistCounts = {};
-      for (final song in historySongs) {
-        final artist = song.artist;
-        final mainArtist = artist.split(',').first.trim();
-        if (mainArtist.toLowerCase() != 'unknown artist') {
-          artistCounts[mainArtist] = (artistCounts[mainArtist] ?? 0) + 1;
-        }
-      }
-
-      if (artistCounts.isEmpty) {
-        return await _getPopularArtistsFallback();
-      }
-
-      final sortedArtists = artistCounts.keys.toList()
-        ..sort((a, b) => artistCounts[b]!.compareTo(artistCounts[a]!));
-
-      final topArtists = sortedArtists.take(3).toList();
-      final saavn = Get.find<SaavnApi>();
-
-      final futures = topArtists.map((name) async {
-        try {
-          final artistId = await saavn.searchArtist(name);
-          if (artistId != null) {
-            final details = await saavn.getArtistDetails(artistId);
-            return {
-              'id': artistId,
-              'name': details['name'] as String? ?? name,
-              'imageUrl': details['imageUrl'] as String? ?? '',
-            };
-          }
-        } catch (e) {
-          debugPrint('HomeController: Failed to fetch headshot for artist $name: $e');
-        }
-        return null;
-      }).toList();
-
-      final results = await Future.wait(futures);
-      final resolved = results.whereType<Map<String, dynamic>>().toList();
-
-      if (resolved.isEmpty) {
-        return await _getPopularArtistsFallback();
-      }
-      return resolved;
-    } catch (e) {
-      debugPrint('HomeController: Recommended artists exception: $e');
-      return await _getPopularArtistsFallback();
-    }
-  }
-
-  Future<List<Map<String, dynamic>>> _getPopularArtistsFallback() async {
-    return [
-      {
-        'id': '459320',
-        'name': 'Arijit Singh',
-        'imageUrl': 'https://c.saavncdn.com/artists/Arijit_Singh_004_20241118063717_150x150.jpg',
-      },
-      {
-        'id': '456323',
-        'name': 'Pritam',
-        'imageUrl': 'https://c.saavncdn.com/artists/Pritam_Chakraborty-20170711073326_150x150.jpg',
-      },
-      {
-        'id': '455663',
-        'name': 'Anirudh Ravichander',
-        'imageUrl': 'https://c.saavncdn.com/artists/Anirudh_Ravichander_003_20260121134149_150x150.jpg',
-      },
-      {
-        'id': '456863',
-        'name': 'Badshah',
-        'imageUrl': 'https://c.saavncdn.com/artists/Badshah_006_20241118064015_150x150.jpg',
-      },
-      {
-        'id': '464932',
-        'name': 'Neha Kakkar',
-        'imageUrl': 'https://c.saavncdn.com/artists/Neha_Kakkar_007_20241212115832_150x150.jpg',
-      },
-      {
-        'id': '468245',
-        'name': 'Diljit Dosanjh',
-        'imageUrl': 'https://c.saavncdn.com/artists/Diljit_Dosanjh_005_20231025073054_150x150.jpg',
-      },
-      {
-        'id': '455130',
-        'name': 'Shreya Ghoshal',
-        'imageUrl': 'https://c.saavncdn.com/artists/Shreya_Ghoshal_007_20241101074144_150x150.jpg',
-      },
-      {
-        'id': '456269',
-        'name': 'A.R. Rahman',
-        'imageUrl': 'https://c.saavncdn.com/artists/AR_Rahman_002_20210120084455_150x150.jpg',
-      },
-    ];
   }
 }

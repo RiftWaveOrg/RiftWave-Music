@@ -54,7 +54,7 @@ class RiftWaveAudioHandler extends BaseAudioHandler with SeekHandler {
     });
 
     _player.processingStateStream.listen((state) {
-      if (state == ProcessingState.completed && !_isTransitioning) {
+      if (state == ProcessingState.completed && !_isTransitioning && _mediaItems.isNotEmpty) {
         onPlaybackCompleted?.call();
       }
     });

@@ -10,6 +10,7 @@ import 'package:riftwave_music/shared/widgets/song_tile.dart';
 import 'package:riftwave_music/shared/widgets/mini_player.dart';
 import 'package:riftwave_music/core/database/models/playlist_model.dart';
 import 'package:riftwave_music/core/database/models/song_model.dart';
+import 'package:riftwave_music/shared/controllers/download_controller.dart';
 
 class PlaylistViewScreen extends StatelessWidget {
   final bool isLikedSongs;
@@ -201,22 +202,39 @@ class PlaylistViewScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-                isLikedSongs
+                (isLikedSongs || isDownloadedSongs)
                     ? SliverPadding(
                         padding: const EdgeInsets.only(left: 16, right: 16, bottom: 24),
                         sliver: SliverList(
                           delegate: SliverChildBuilderDelegate(
                             (context, index) {
                               final song = songs[index];
-                              return SongTile(
-                                title: song.title,
-                                artist: song.artist,
-                                thumbnailUrl: song.thumbnailUrl,
-                                isPlaying: player.currentSong.value?.id == song.id && player.isPlaying.value,
-                                onTap: () {
-                                  player.playAll(songs, startIndex: index);
+                              return Dismissible(
+                                key: ValueKey('dismiss_${isLikedSongs ? 'liked' : 'downloaded'}_song_${song.id}'),
+                                direction: DismissDirection.endToStart,
+                                onDismissed: (_) {
+                                  if (isLikedSongs) {
+                                    library.toggleLike(song);
+                                  } else if (isDownloadedSongs) {
+                                    Get.find<DownloadController>().removeDownload(song);
+                                  }
                                 },
-                                song: song,
+                                background: Container(
+                                  color: Colors.red.withAlpha(200),
+                                  alignment: Alignment.centerRight,
+                                  padding: const EdgeInsets.only(right: 20),
+                                  child: const Icon(Icons.delete_rounded, color: Colors.white),
+                                ),
+                                child: SongTile(
+                                  title: song.title,
+                                  artist: song.artist,
+                                  thumbnailUrl: song.thumbnailUrl,
+                                  isPlaying: player.currentSong.value?.id == song.id && player.isPlaying.value,
+                                  onTap: () {
+                                    player.playAll(songs, startIndex: index);
+                                  },
+                                  song: song,
+                                ),
                               );
                             },
                             childCount: songs.length,
