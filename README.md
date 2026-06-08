@@ -7,9 +7,9 @@
 *No ads. No tracking. No accounts. Just pure music.*
 
 [![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20Windows%20%7C%20Linux%20%7C%20macOS-blue?logo=flutter&logoColor=white)](https://flutter.dev)
-[![GitHub Release](https://img.shields.io/github/v/release/NazomiOrg/Nazomi-App?color=success&label=Latest%20Release&logo=github)](https://github.com/NazomiOrg/Nazomi-App/releases)
+[![GitHub Release](https://img.shields.io/github/v/release/Pratyush0803/RiftWave-Music?color=success&label=Latest%20Release&logo=github)](https://github.com/Pratyush0803/RiftWave-Music/releases)
 [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](LICENSE)
-[![GitHub stars](https://img.shields.io/github/stars/NazomiOrg/Nazomi-App?style=social)](https://github.com/NazomiOrg/Nazomi-App/stargazers)
+[![GitHub stars](https://img.shields.io/github/stars/Pratyush0803/RiftWave-Music?style=social)](https://github.com/Pratyush0803/RiftWave-Music/stargazers)
 
 [**Download**](#-download) • [**Features**](#-features) • [**Screenshots**](#-screenshots) • [**FAQ**](#-faq) • [**Legal Disclaimer**](#-legal-disclaimer--terms-of-use)
 
@@ -89,7 +89,7 @@ Here is a glimpse into the beautiful design and experience of RiftWave Music:
 Grab the latest version of RiftWave Music!
 
 <p align="left">
-  <a href="https://github.com/NazomiOrg/Nazomi-App/releases">
+  <a href="https://github.com/Pratyush0803/RiftWave-Music/releases">
     <img src="https://img.shields.io/badge/Get_it_on-GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="Get it on GitHub" height="50">
   </a>
 </p>
@@ -103,7 +103,7 @@ Grab the latest version of RiftWave Music!
 
 ## 🛠 Installation (Android)
 
-1. Go to the [Releases](https://github.com/NazomiOrg/Nazomi-App/releases) page.
+1. Go to the [Releases](https://github.com/Pratyush0803/RiftWave-Music/releases) page.
 2. Download the appropriate `.apk` file for your device's architecture.
 3. Open the downloaded file. You may be prompted to allow **"Install from unknown sources"**.
 4. Enable the permission, complete the installation, and enjoy the music!
@@ -131,7 +131,7 @@ If you want to compile the application yourself or contribute to the development
 ### Steps
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/NazomiOrg/Nazomi-App.git
+   git clone https://github.com/Pratyush0803/RiftWave-Music.git
    cd RiftWave-Music
    ```
 2. **Install dependencies:**
