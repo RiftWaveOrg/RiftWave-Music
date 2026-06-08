@@ -60,8 +60,8 @@ class AudioPlayerController extends GetxController {
   final RxList<SongModel> upNextSuggestions = <SongModel>[].obs;
   String _lastSuggestionSongId = '';
 
-  bool _isPreloading = false;
-  int _lastPreloadedIndex = -1;
+  List<int> _internalPlaylistIndices = [];
+  bool _isManagingPreload = false;
 
   @override
   void onInit() {
@@ -102,19 +102,20 @@ class AudioPlayerController extends GetxController {
   }
 
   void _onAudioHandlerIndexChanged(int newIndex) {
-    
-    
-    if (newIndex > 0) {
-      final nextIdx = _getNextIndex();
-      if (nextIdx != null) {
-        currentQueueIndex.value = nextIdx;
+    if (newIndex >= 0 && newIndex < _internalPlaylistIndices.length) {
+      final uiIndex = _internalPlaylistIndices[newIndex];
+      if (uiIndex != currentQueueIndex.value) {
+        currentQueueIndex.value = uiIndex;
         if (shuffleMode.value) {
-          _shufflePosition = _shuffledIndices.indexOf(nextIdx);
+          _shufflePosition = _shuffledIndices.indexOf(uiIndex);
         }
-        currentSong.value = queue[nextIdx];
-        totalDuration.value = Duration(milliseconds: queue[nextIdx].durationMs);
+        currentSong.value = queue[uiIndex];
+        totalDuration.value = Duration(milliseconds: queue[uiIndex].durationMs);
         _persistQueue();
-        debugPrint('AudioPlayerController: Gapless transition completed. New song: ${queue[nextIdx].title}');
+        if (Get.isRegistered<VideoPlayerController>()) {
+           Get.find<VideoPlayerController>().jumpToIndex(newIndex);
+        }
+        _managePreloadQueue();
       }
     }
   }
@@ -210,12 +211,7 @@ class AudioPlayerController extends GetxController {
         currentPosition.value = pos;
         
         
-        if (totalDuration.value.inSeconds > 0) {
-          final remaining = totalDuration.value.inSeconds - pos.inSeconds;
-          if (remaining <= 30) {
-            _preloadNextWorker();
-          }
-        }
+        // Preloading is now managed proactively by _managePreloadQueue
       }),
     );
 
@@ -234,75 +230,7 @@ class AudioPlayerController extends GetxController {
     );
   }
 
-  Future<void> _preloadNextWorker() async {
-    if (_isPreloading || queue.isEmpty) return;
-    
-    final nextIdx = _getNextIndex();
-    if (nextIdx == null || nextIdx == _lastPreloadedIndex || nextIdx == currentQueueIndex.value) return;
-
-    _isPreloading = true;
-    try {
-      final nextSong = queue[nextIdx];
-      debugPrint('AudioPlayerController: Preloading next song: ${nextSong.title}');
-
-      
-      SongModel activeSong = nextSong;
-      if (activeSong.sourceId.isEmpty) {
-        if (activeSong.source == MusicSource.youtube) {
-          final results = await Get.find<YouTubeApi>().search('${activeSong.title} ${activeSong.artist}');
-          if (results.isNotEmpty) activeSong = activeSong.copyWith(sourceId: results.first.sourceId);
-        } else {
-          final results = await Get.find<SaavnApi>().searchSongs('${activeSong.title} ${activeSong.artist}');
-          if (results.isNotEmpty) activeSong = activeSong.copyWith(sourceId: results.first.sourceId);
-        }
-      }
-
-      
-      String streamUrl = '';
-      if (activeSong.isDownloaded && activeSong.localPath != null) {
-        final file = File(activeSong.localPath!);
-        if (await file.exists()) {
-          streamUrl = Uri.file(activeSong.localPath!).toString();
-        }
-      }
-      
-      if (streamUrl.isEmpty) {
-        if (activeSong.source == MusicSource.youtube) {
-          streamUrl = await Get.find<YouTubeApi>().getStreamUrl(activeSong.sourceId.isNotEmpty ? activeSong.sourceId : activeSong.id);
-        } else {
-          streamUrl = await Get.find<SaavnApi>().getStreamUrl(activeSong.sourceId.isNotEmpty ? activeSong.sourceId : activeSong.id);
-        }
-      }
-
-      if (streamUrl.isNotEmpty) {
-        final mediaItem = MediaItem(
-          id: activeSong.id,
-          title: activeSong.title,
-          artist: activeSong.artist,
-          album: activeSong.album,
-          duration: Duration(milliseconds: activeSong.durationMs),
-          artUri: _getHighResArtUri(activeSong),
-        );
-
-        
-        await _audioHandler.preloadNextItem(mediaItem, streamUrl);
-        _lastPreloadedIndex = nextIdx;
-
-        
-        final isVideoMode = Get.isRegistered<SettingsController>() && Get.find<SettingsController>().videoModeEnabled.value;
-        if (isVideoMode && activeSong.source == MusicSource.youtube) {
-            final videoId = activeSong.sourceId.isNotEmpty ? activeSong.sourceId : activeSong.id;
-            if (Get.isRegistered<VideoPlayerController>()) {
-                await Get.find<VideoPlayerController>().preloadNextVideo(videoId);
-            }
-        }
-      }
-    } catch (e) {
-      debugPrint('AudioPlayerController: Preload failed: $e');
-    } finally {
-      _isPreloading = false;
-    }
-  }
+  
 
   Future<void> playSong(SongModel song) async {
     queue.assignAll([song]);
@@ -361,15 +289,21 @@ class AudioPlayerController extends GetxController {
       return;
     }
 
-    if (nextIndex == _lastPreloadedIndex) {
-      debugPrint('AudioPlayerController: skipToNext() -> delegating to preloaded audio handler');
-      await _audioHandler.skipToNext();
-      return;
-    }
-
     currentQueueIndex.value = nextIndex;
     _persistQueue();
-    await _loadAndPlay(queue[nextIndex]);
+    
+    int internalIdx = _internalPlaylistIndices.indexOf(nextIndex);
+    if (internalIdx != -1) {
+       currentSong.value = queue[nextIndex];
+       totalDuration.value = Duration(milliseconds: queue[nextIndex].durationMs);
+       await _audioHandler.jumpToIndex(internalIdx);
+       if (Get.isRegistered<VideoPlayerController>()) {
+          await Get.find<VideoPlayerController>().jumpToIndex(internalIdx);
+       }
+       _managePreloadQueue(); // Fill up the buffer ahead
+    } else {
+       await _loadAndPlay(queue[nextIndex]);
+    }
   }
 
   Future<void> skipToPrevious() async {
@@ -385,7 +319,19 @@ class AudioPlayerController extends GetxController {
 
     currentQueueIndex.value = prevIndex;
     _persistQueue();
-    await _loadAndPlay(queue[prevIndex]);
+    
+    int internalIdx = _internalPlaylistIndices.indexOf(prevIndex);
+    if (internalIdx != -1) {
+       currentSong.value = queue[prevIndex];
+       totalDuration.value = Duration(milliseconds: queue[prevIndex].durationMs);
+       await _audioHandler.jumpToIndex(internalIdx);
+       if (Get.isRegistered<VideoPlayerController>()) {
+          await Get.find<VideoPlayerController>().jumpToIndex(internalIdx);
+       }
+       _managePreloadQueue();
+    } else {
+       await _loadAndPlay(queue[prevIndex]);
+    }
   }
 
   Future<void> seekTo(Duration position) async {
@@ -535,15 +481,213 @@ class AudioPlayerController extends GetxController {
     return currentQueueIndex.value > 0;
   }
 
+  
+  int? _getNextIndexFor(int currentIndex) {
+    if (shuffleMode.value) {
+      int pos = _shuffledIndices.indexOf(currentIndex);
+      if (pos != -1 && pos < _shuffledIndices.length - 1) {
+        return _shuffledIndices[pos + 1];
+      } else if (repeatMode.value == RiftWaveRepeatMode.all && _shuffledIndices.isNotEmpty) {
+        return _shuffledIndices[0];
+      }
+      return null;
+    }
+    if (currentIndex < queue.length - 1) {
+      return currentIndex + 1;
+    } else if (repeatMode.value == RiftWaveRepeatMode.all && queue.isNotEmpty) {
+      return 0;
+    }
+    return null;
+  }
+
+  List<int> _getUpcomingIndices(int startIndex, int count) {
+    if (queue.isEmpty) return [];
+    List<int> res = [startIndex];
+    int current = startIndex;
+    for (int i = 1; i < count; i++) {
+      int? next = _getNextIndexFor(current);
+      if (next == null || res.contains(next)) break;
+      res.add(next);
+      current = next;
+    }
+    return res;
+  }
+
+  
+  Future<Map<String, dynamic>> _extractUrlsForIndex(int uiIdx) async {
+    SongModel song = queue[uiIdx];
+
+    if (song.sourceId.isEmpty) {
+      try {
+        if (song.source == MusicSource.youtube) {
+          final searchResults = await Get.find<YouTubeApi>().search('${song.title} ${song.artist}');
+          if (searchResults.isNotEmpty) {
+            song = song.copyWith(sourceId: searchResults.first.sourceId, thumbnailUrl: searchResults.first.thumbnailUrl.isNotEmpty ? searchResults.first.thumbnailUrl : song.thumbnailUrl);
+            queue[uiIdx] = song;
+          }
+        } else {
+          final searchResults = await Get.find<SaavnApi>().searchSongs('${song.title} ${song.artist}');
+          if (searchResults.isNotEmpty) {
+            song = song.copyWith(sourceId: searchResults.first.sourceId, thumbnailUrl: searchResults.first.thumbnailUrl.isNotEmpty ? searchResults.first.thumbnailUrl : song.thumbnailUrl);
+            queue[uiIdx] = song;
+          }
+        }
+      } catch (e) {
+        debugPrint('AudioPlayerController: Search resolution failed for ${song.title}');
+      }
+    }
+
+    String aUrl = '';
+    String vUrl = '';
+
+    if (song.isDownloaded && song.localPath != null) {
+      aUrl = Uri.file(song.localPath!).toString();
+    }
+
+    if (aUrl.isEmpty) {
+      try {
+        if (song.source == MusicSource.youtube) {
+          final manifest = await Get.find<YouTubeApi>().getDualStreamManifest(
+            song.sourceId.isNotEmpty ? song.sourceId : song.id,
+            Get.isRegistered<SettingsController>() ? Get.find<SettingsController>().videoQuality.value : '720p',
+          );
+          if (manifest != null) {
+            aUrl = manifest['audioUrl'] ?? '';
+            vUrl = manifest['videoUrl'] ?? '';
+          } else {
+             aUrl = await Get.find<YouTubeApi>().getStreamUrl(song.sourceId.isNotEmpty ? song.sourceId : song.id);
+          }
+        } else {
+          aUrl = await Get.find<SaavnApi>().getStreamUrl(song.sourceId.isNotEmpty ? song.sourceId : song.id);
+        }
+      } catch (e) {
+        debugPrint('AudioPlayerController: Extraction failed for ${song.title}: $e');
+      }
+    }
+
+    final mediaItem = MediaItem(
+      id: song.id,
+      title: song.title,
+      artist: song.artist,
+      album: song.album,
+      duration: Duration(milliseconds: song.durationMs),
+      artUri: _getHighResArtUri(song),
+    );
+
+    if (aUrl.isNotEmpty) {
+      return {
+        'mediaItem': mediaItem,
+        'audioUrl': aUrl,
+        'videoUrl': vUrl.isNotEmpty ? vUrl : aUrl,
+      };
+    } else {
+      return {
+        'mediaItem': mediaItem,
+        'audioUrl': 'asset://assets/silence.mp3',
+        'videoUrl': 'asset://assets/silence.mp3',
+      };
+    }
+  }
+
+  Future<void> _managePreloadQueue({bool forceReset = false, bool playWhenReady = false}) async {
+    if (_isManagingPreload) return;
+    _isManagingPreload = true;
+
+    try {
+      if (queue.isEmpty || currentQueueIndex.value < 0) {
+        _isManagingPreload = false;
+        return;
+      }
+
+      int currentInternalIndex = _internalPlaylistIndices.indexOf(currentQueueIndex.value);
+
+      if (currentInternalIndex == -1 || forceReset) {
+        
+        final targetIndices = _getUpcomingIndices(currentQueueIndex.value, 4);
+        final firstExtraction = await _extractUrlsForIndex(targetIndices[0]);
+        
+        _internalPlaylistIndices = [targetIndices[0]];
+        
+        await _audioHandler.updatePlaylist([firstExtraction['mediaItem']], [firstExtraction['audioUrl']], initialIndex: 0);
+        if (Get.isRegistered<VideoPlayerController>()) {
+           await Get.find<VideoPlayerController>().loadPlaylist([firstExtraction['videoUrl']], initialIndex: 0);
+        }
+
+        if (playWhenReady) {
+          _waitForReadyAndPlay();
+        }
+        for (int i = 1; i < targetIndices.length; i++) {
+          final extraction = await _extractUrlsForIndex(targetIndices[i]);
+          _internalPlaylistIndices.add(targetIndices[i]);
+          await _audioHandler.appendToPlaylist(extraction['mediaItem'], extraction['audioUrl']);
+          if (Get.isRegistered<VideoPlayerController>()) {
+             await Get.find<VideoPlayerController>().appendToPlaylist(extraction['videoUrl']);
+          }
+        }
+
+      } else {
+        int numAhead = _internalPlaylistIndices.length - currentInternalIndex;
+        while (numAhead < 4) {
+           int lastInternal = _internalPlaylistIndices.last;
+           int? nextQueueIdx = _getNextIndexFor(lastInternal);
+           if (nextQueueIdx == null || _internalPlaylistIndices.contains(nextQueueIdx)) break;
+           final extraction = await _extractUrlsForIndex(nextQueueIdx);
+           
+           _internalPlaylistIndices.add(nextQueueIdx);
+           await _audioHandler.appendToPlaylist(extraction['mediaItem'], extraction['audioUrl']);
+           if (Get.isRegistered<VideoPlayerController>()) {
+              await Get.find<VideoPlayerController>().appendToPlaylist(extraction['videoUrl']);
+           }
+           numAhead++;
+        }
+        
+        if (playWhenReady) {
+          await _waitForReadyAndPlay();
+        }
+      }
+
+    } finally {
+      _isManagingPreload = false;
+    }
+  }
+
+  Future<void> _waitForReadyAndPlay() async {
+     isBuffering.value = true;
+     
+     // Wait until audio is ready
+     int attempts = 0;
+     while (attempts < 20) { // 10 seconds max
+        if (_audioHandler.player.playerState.processingState == ProcessingState.ready) {
+           break;
+        }
+        await Future.delayed(const Duration(milliseconds: 500));
+        attempts++;
+     }
+
+     if (Get.isRegistered<VideoPlayerController>()) {
+        final vpc = Get.find<VideoPlayerController>();
+        attempts = 0;
+        while (attempts < 20) {
+           if (vpc.isReadyForCurrent.value) {
+              break;
+           }
+           await Future.delayed(const Duration(milliseconds: 500));
+           attempts++;
+        }
+     }
+
+     isBuffering.value = false;
+     await _audioHandler.play();
+  }
+
   Future<void> _loadAndPlay(SongModel song) async {
     errorMessage.value = '';
-    
     currentSong.value = song;
     hasSong.value = true;
     wantsToPlayAfterLoad = false;
     
     try {
-      await _audioHandler.stop();
+      await _audioHandler.pause();
     } catch (_) {}
 
     final remainingInQueue = queue.length - 1 - currentQueueIndex.value;
@@ -554,233 +698,11 @@ class AudioPlayerController extends GetxController {
     currentPosition.value = Duration.zero;
     totalDuration.value = Duration(milliseconds: song.durationMs);
 
-    SongModel activeSong = song;
+    try {
+      Get.find<LibraryController>().addToHistory(song);
+    } catch (e) {}
 
-    if (activeSong.sourceId.isEmpty) {
-      debugPrint('AudioPlayerController: Song sourceId is empty. Resolving via search for: ${activeSong.title} - ${activeSong.artist}');
-      try {
-        if (activeSong.source == MusicSource.youtube) {
-          final searchResults = await Get.find<YouTubeApi>().search('${activeSong.title} ${activeSong.artist}');
-          if (searchResults.isNotEmpty) {
-            final matched = searchResults.first;
-            activeSong = activeSong.copyWith(
-              sourceId: matched.sourceId,
-              durationMs: matched.durationMs > 0 ? matched.durationMs : activeSong.durationMs,
-              thumbnailUrl: (activeSong.thumbnailUrl.isEmpty || activeSong.thumbnailUrl.contains('2a96cbd8b46e442fc41c2b86b821562f'))
-                  ? matched.thumbnailUrl
-                  : activeSong.thumbnailUrl,
-            );
-            final idx = queue.indexWhere((s) => s.id == song.id);
-            if (idx != -1) {
-              queue[idx] = activeSong;
-            }
-            currentSong.value = activeSong;
-            totalDuration.value = Duration(milliseconds: activeSong.durationMs);
-          }
-        } else {
-          final searchResults = await Get.find<SaavnApi>().searchSongs('${activeSong.title} ${activeSong.artist}');
-          if (searchResults.isNotEmpty) {
-            final matched = searchResults.first;
-            activeSong = activeSong.copyWith(
-              sourceId: matched.sourceId,
-              durationMs: matched.durationMs > 0 ? matched.durationMs : activeSong.durationMs,
-              thumbnailUrl: (activeSong.thumbnailUrl.isEmpty || activeSong.thumbnailUrl.contains('2a96cbd8b46e442fc41c2b86b821562f'))
-                  ? matched.thumbnailUrl
-                  : activeSong.thumbnailUrl,
-            );
-            final idx = queue.indexWhere((s) => s.id == song.id);
-            if (idx != -1) {
-              queue[idx] = activeSong;
-            }
-            currentSong.value = activeSong;
-            totalDuration.value = Duration(milliseconds: activeSong.durationMs);
-          }
-        }
-      } catch (e) {
-        debugPrint('AudioPlayerController: Failed to pre-resolve empty sourceId: $e');
-      }
-    }
-
-    String streamUrl = '';
-    bool success = false;
-    bool isLocal = false;
-
-    if (activeSong.isDownloaded && activeSong.localPath != null) {
-      final file = File(activeSong.localPath!);
-      if (await file.exists()) {
-        streamUrl = Uri.file(activeSong.localPath!).toString();
-        isLocal = true;
-      }
-    }
-
-    if (isLocal) {
-      try {
-        final mediaItem = MediaItem(
-          id: activeSong.id,
-          title: activeSong.title,
-          artist: activeSong.artist,
-          album: activeSong.album,
-          duration: Duration(milliseconds: activeSong.durationMs),
-          artUri: _getHighResArtUri(activeSong),
-        );
-        
-        if (currentSong.value?.id != song.id) return;
-
-        await _audioHandler.setMediaItemAndPlay(mediaItem, streamUrl);
-        success = true;
-        debugPrint('AudioPlayerController: Playing from local download successfully!');
-      } catch (e) {
-        debugPrint('AudioPlayerController: Failed to play local file: $e');
-        isLocal = false;
-      }
-    }
-
-    if (!success) {
-      try {
-        debugPrint('AudioPlayerController: Trying primary source (${activeSong.source.name}) for: ${activeSong.title}');
-      Map<String, String>? headers;
-      if (activeSong.source == MusicSource.youtube) {
-        final ytApi = Get.find<YouTubeApi>();
-        streamUrl = await ytApi.getStreamUrl(activeSong.sourceId.isNotEmpty ? activeSong.sourceId : activeSong.id);
-        
-        headers = {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-        };
-      } else {
-        streamUrl = await Get.find<SaavnApi>().getStreamUrl(activeSong.sourceId.isNotEmpty ? activeSong.sourceId : activeSong.id);
-      }
-
-      final mediaItem = MediaItem(
-        id: activeSong.id,
-        title: activeSong.title,
-        artist: activeSong.artist,
-        album: activeSong.album,
-        duration: Duration(milliseconds: activeSong.durationMs),
-        artUri: _getHighResArtUri(activeSong),
-      );
-
-      final isVideoMode = Get.isRegistered<SettingsController>() && Get.find<SettingsController>().videoModeEnabled.value;
-      
-      
-      if (currentSong.value?.id != song.id) return;
-
-      if (isVideoMode && !wantsToPlayAfterLoad) {
-        await _audioHandler.setMediaItemOnly(mediaItem, streamUrl, headers: headers);
-        debugPrint('AudioPlayerController: Primary source loaded (Video Mode, playback deferred)');
-      } else {
-        await _audioHandler.setMediaItemAndPlay(mediaItem, streamUrl, headers: headers);
-        debugPrint('AudioPlayerController: Primary source loaded and playing successfully!');
-      }
-      success = true;
-    } catch (e) {
-      debugPrint('AudioPlayerController: Primary source failed: $e. Initiating fallback search...');
-    }
-    }
-
-    if (!success) {
-      try {
-        if (song.source == MusicSource.youtube) {
-
-          debugPrint('AudioPlayerController: Searching JioSaavn fallback for: ${song.title} ${song.artist}');
-          final fallbackList = await Get.find<SaavnApi>().searchSongs('${song.title} ${song.artist}');
-
-          SongModel? matchedSong;
-          for (final candidate in fallbackList) {
-            if (AudioPlayerController.isSongMatch(song, candidate)) {
-              matchedSong = candidate;
-              break;
-            }
-          }
-
-          if (matchedSong != null) {
-            activeSong = matchedSong;
-            currentSong.value = matchedSong;
-
-            streamUrl = await Get.find<SaavnApi>().getStreamUrl(matchedSong.id);
-
-            final mediaItem = MediaItem(
-              id: matchedSong.id,
-              title: matchedSong.title,
-              artist: matchedSong.artist,
-              album: matchedSong.album,
-              duration: Duration(milliseconds: matchedSong.durationMs),
-              artUri: _getHighResArtUri(matchedSong),
-            );
-            
-            if (currentSong.value?.id != song.id) return;
-
-            await _audioHandler.setMediaItemAndPlay(mediaItem, streamUrl);
-            success = true;
-            debugPrint('AudioPlayerController: JioSaavn fallback loaded and playing successfully!');
-          } else {
-            throw Exception('No precise JioSaavn fallback matches found.');
-          }
-        } else {
-
-          debugPrint('AudioPlayerController: Searching YouTube fallback for: ${song.title} ${song.artist}');
-          final fallbackList = await Get.find<YouTubeApi>().search('${song.title} ${song.artist}');
-
-          SongModel? matchedSong;
-          for (final candidate in fallbackList) {
-            if (AudioPlayerController.isSongMatch(song, candidate)) {
-              matchedSong = candidate;
-              break;
-            }
-          }
-
-          if (matchedSong != null) {
-            activeSong = matchedSong;
-            currentSong.value = matchedSong;
-
-            final ytApi = Get.find<YouTubeApi>();
-            streamUrl = await ytApi.getStreamUrl(matchedSong.id);
-
-            final headers = {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-            };
-
-            final mediaItem = MediaItem(
-              id: matchedSong.id,
-              title: matchedSong.title,
-              artist: matchedSong.artist,
-              album: matchedSong.album,
-              duration: Duration(milliseconds: matchedSong.durationMs),
-              artUri: _getHighResArtUri(matchedSong),
-            );
-
-            final isVideoMode = Get.isRegistered<SettingsController>() && Get.find<SettingsController>().videoModeEnabled.value;
-            
-            
-            if (currentSong.value?.id != song.id) {
-              debugPrint('AudioPlayerController: Aborting playback because the song changed or queue was cleared during network fetch.');
-              return;
-            }
-
-            if (isVideoMode && !wantsToPlayAfterLoad) {
-              await _audioHandler.setMediaItemOnly(mediaItem, streamUrl, headers: headers);
-              debugPrint('AudioPlayerController: YouTube fallback loaded (Video Mode, playback deferred)');
-            } else {
-              await _audioHandler.setMediaItemAndPlay(mediaItem, streamUrl, headers: headers);
-              debugPrint('AudioPlayerController: YouTube fallback loaded and playing successfully!');
-            }
-            success = true;
-          } else {
-            throw Exception('No precise YouTube fallback matches found.');
-          }
-        }
-      } catch (fallbackError) {
-        debugPrint('AudioPlayerController: Fallback source failed: $fallbackError');
-        errorMessage.value = 'Failed to load audio: $fallbackError';
-      }
-    }
-
-    if (success) {
-      try {
-        Get.find<LibraryController>().addToHistory(activeSong);
-      } catch (e) {
-        debugPrint('AudioPlayerController: Failed to add to history: $e');
-      }
-    }
+    await _managePreloadQueue(forceReset: true, playWhenReady: true);
   }
 
   void _onTrackCompleted() {
