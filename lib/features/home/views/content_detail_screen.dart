@@ -240,218 +240,138 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
         top: false,
         child: MiniPlayer(),
       ),
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back_ios_new_rounded,
-            color: colorScheme.onSurface,
-          ),
-          onPressed: () => Get.back(),
-        ),
-      ),
-      extendBodyBehindAppBar: true,
-      body: Stack(
-        children: [
-          if (widget.imageUrl.isNotEmpty)
-            Positioned.fill(
-              child: CachedNetworkImage(
-                imageUrl: widget.imageUrl,
-                fit: BoxFit.cover,
-                errorWidget: (context, url, error) => const SizedBox(),
-              ),
+      body: CustomScrollView(
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 340,
+            pinned: true,
+            stretch: true,
+            backgroundColor: colorScheme.surface,
+            elevation: 0,
+            leading: IconButton(
+              icon: Icon(Icons.arrow_back_ios_new_rounded, color: colorScheme.onSurface),
+              onPressed: () => Get.back(),
             ),
-          if (widget.imageUrl.isNotEmpty)
-            Positioned.fill(
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 50, sigmaY: 50),
-                child: Container(
-                  color: colorScheme.surface.withAlpha(180),
-                ),
-              ),
-            ),
-          CustomScrollView(
-            slivers: [
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 100, 20, 20),
-              child: Column(
+            flexibleSpace: FlexibleSpaceBar(
+              stretchModes: const [StretchMode.zoomBackground, StretchMode.blurBackground],
+              background: Stack(
+                fit: StackFit.expand,
                 children: [
-                  Center(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: colorScheme.primary.withAlpha(40),
-                            blurRadius: 30,
-                            offset: const Offset(0, 10),
-                          ),
+                  if (widget.imageUrl.isNotEmpty)
+                    CachedNetworkImage(
+                      imageUrl: widget.imageUrl,
+                      fit: BoxFit.cover,
+                      errorWidget: (context, url, error) => const SizedBox(),
+                    ),
+                  if (widget.imageUrl.isNotEmpty)
+                    BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 50, sigmaY: 50),
+                      child: Container(color: colorScheme.surface.withAlpha(180)),
+                    ),
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          colorScheme.surface.withAlpha(100),
+                          colorScheme.surface,
                         ],
                       ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(24),
-                        child: widget.imageUrl.isNotEmpty
-                            ? CachedNetworkImage(
-                                imageUrl: widget.imageUrl,
-                                width: 220,
-                                height: 220,
-                                fit: BoxFit.cover,
-                                placeholder: (context, url) => Container(
-                                  width: 220,
-                                  height: 220,
-                                  color: colorScheme.surfaceContainerHighest,
-                                  child: Icon(
-                                    widget.type == 'Artist'
-                                        ? Icons.person_rounded
-                                        : Icons.music_note_rounded,
-                                    size: 64,
-                                    color: colorScheme.primary.withAlpha(120),
-                                  ),
-                                ),
-                                errorWidget: (context, url, error) => Container(
-                                  width: 220,
-                                  height: 220,
-                                  color: colorScheme.surfaceContainerHighest,
-                                  child: Icon(
-                                    widget.type == 'Artist'
-                                        ? Icons.person_rounded
-                                        : Icons.music_note_rounded,
-                                    size: 64,
-                                    color: colorScheme.primary.withAlpha(120),
-                                  ),
-                                ),
-                              )
-                            : Container(
-                                width: 220,
-                                height: 220,
-                                color: colorScheme.surfaceContainerHighest,
-                                child: Icon(
-                                  widget.type == 'Artist'
-                                      ? Icons.person_rounded
-                                      : Icons.music_note_rounded,
-                                  size: 64,
-                                  color: colorScheme.primary.withAlpha(120),
-                                ),
-                              ),
-                      ),
-                    ).animate().scale(duration: 400.ms, curve: Curves.easeOut),
+                    ),
                   ),
-                  const SizedBox(height: 24),
-                  Text(
-                    widget.title,
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurface,
+                  Positioned(
+                    bottom: 24,
+                    left: 20,
+                    right: 20,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Container(
+                          width: 140,
+                          height: 140,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(color: colorScheme.shadow.withAlpha(50), blurRadius: 20, offset: const Offset(0, 8)),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(16),
+                            child: widget.imageUrl.isNotEmpty
+                                ? CachedNetworkImage(imageUrl: widget.imageUrl, fit: BoxFit.cover)
+                                : Container(color: colorScheme.surfaceContainerHighest, child: Icon(widget.type == 'Artist' ? Icons.person_rounded : Icons.music_note_rounded, size: 64, color: colorScheme.primary.withAlpha(120))),
+                          ),
+                        ),
+                        const SizedBox(width: 20),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(widget.title, style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, color: colorScheme.onSurface), maxLines: 2, overflow: TextOverflow.ellipsis),
+                              const SizedBox(height: 8),
+                              Text(widget.subtitle, style: theme.textTheme.titleSmall?.copyWith(color: colorScheme.onSurface.withAlpha(180), fontWeight: FontWeight.w600), maxLines: 1, overflow: TextOverflow.ellipsis),
+                              const SizedBox(height: 4),
+                              Text(_isLoading ? 'Loading...' : '${_songs.length} tracks', style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.primary, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ).animate().fadeIn(duration: 400.ms, delay: 100.ms),
-                  const SizedBox(height: 8),
-                  Text(
-                    widget.subtitle,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      color: colorScheme.onSurface.withAlpha(180),
-                      fontWeight: FontWeight.w600,
-                    ),
-                    textAlign: TextAlign.center,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ).animate().fadeIn(duration: 400.ms, delay: 200.ms),
-                  const SizedBox(height: 8),
-                  Text(
-                    _isLoading
-                        ? '${widget.type} • Loading...'
-                        : _songs.isNotEmpty
-                        ? '${widget.type} • ${_songs.length} tracks'
-                        : '${widget.type} • Recommended tracks',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: colorScheme.onSurface.withAlpha(130),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ).animate().fadeIn(duration: 400.ms, delay: 300.ms),
-                  const SizedBox(height: 24),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+              child: Column(
+                children: [
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      ElevatedButton.icon(
-                        onPressed: (_songs.isEmpty && _suggestions.isEmpty)
-                            ? null
-                            : () {
-                                if (_songs.isNotEmpty) {
-                                  Get.find<AudioPlayerController>().playAll(
-                                    _songs,
-                                    startIndex: 0,
-                                  );
-                                } else {
-                                  Get.find<AudioPlayerController>().playAll(
-                                    _suggestions,
-                                    startIndex: 0,
-                                  );
-                                }
-                              },
-                        icon: const Icon(Icons.play_arrow_rounded, size: 28),
-                        label: const Text(
-                          'PLAY ALL',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 1.1,
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: (_songs.isEmpty && _suggestions.isEmpty) ? null : () {
+                            Get.find<AudioPlayerController>().playAll(_songs.isNotEmpty ? _songs : _suggestions, startIndex: 0);
+                          },
+                          icon: const Icon(Icons.play_arrow_rounded, size: 28),
+                          label: const Text('PLAY ALL', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.1)),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: colorScheme.primary,
+                            foregroundColor: colorScheme.onPrimary,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                           ),
+                        ).animate().fadeIn(duration: 400.ms),
+                      ),
+                      const SizedBox(width: 12),
+                      IconButton.filledTonal(
+                        onPressed: () {},
+                        icon: const Icon(Icons.shuffle_rounded),
+                        style: IconButton.styleFrom(
+                          padding: const EdgeInsets.all(16),
+                          backgroundColor: colorScheme.surfaceContainerHigh,
                         ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: colorScheme.primary,
-                          foregroundColor: colorScheme.onPrimary,
-                          elevation: 4,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 36,
-                            vertical: 14,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                        ),
-                      ).animate().fadeIn(duration: 400.ms, delay: 400.ms),
+                      ).animate().fadeIn(duration: 400.ms, delay: 100.ms),
                     ],
                   ),
                   if (_biography.isNotEmpty) ...[
                     const SizedBox(height: 28),
                     Container(
                       padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: colorScheme.surfaceContainerHigh,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: colorScheme.outlineVariant.withAlpha(40),
-                        ),
-                      ),
+                      decoration: BoxDecoration(color: colorScheme.surfaceContainerHigh, borderRadius: BorderRadius.circular(16), border: Border.all(color: colorScheme.outlineVariant.withAlpha(40))),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Biography',
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: colorScheme.primary,
-                            ),
-                          ),
+                          Text('Biography', style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold, color: colorScheme.primary)),
                           const SizedBox(height: 8),
-                          Text(
-                            _biography,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: colorScheme.onSurface.withAlpha(180),
-                              height: 1.5,
-                            ),
-                            maxLines: 4,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                          Text(_biography, style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurface.withAlpha(180), height: 1.5), maxLines: 4, overflow: TextOverflow.ellipsis),
                         ],
                       ),
-                    ).animate().fadeIn(duration: 500.ms, delay: 450.ms),
+                    ).animate().fadeIn(duration: 500.ms, delay: 200.ms),
                   ],
-                  const SizedBox(height: 20),
-                  const Divider(),
                 ],
               ),
             ),
@@ -797,8 +717,6 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
           const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ],
       ),
-      ],
-      ),
     );
   }
 
@@ -811,8 +729,11 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
         child: Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: Colors.transparent,
             borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: colorScheme.outlineVariant.withAlpha(40),
+            ),
           ),
           child: Row(
             children: [
@@ -837,6 +758,8 @@ class _ContentDetailScreenState extends State<ContentDetailScreen> {
                   ],
                 ),
               ),
+              const SizedBox(width: 10),
+              Container(width: 20, height: 20, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle)),
             ],
           ),
         ),

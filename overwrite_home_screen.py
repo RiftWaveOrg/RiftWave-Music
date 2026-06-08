@@ -1,8 +1,7 @@
-import 'package:cached_network_image/cached_network_image.dart';
+content = """import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:get/get.dart';
-import 'package:shimmer/shimmer.dart';
 import 'package:riftwave_music/core/database/models/song_model.dart';
 import 'package:riftwave_music/features/home/controllers/home_controller.dart';
 import 'package:riftwave_music/features/home/views/content_detail_screen.dart';
@@ -26,7 +25,7 @@ class HomeScreen extends GetView<HomeController> {
           slivers: [
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(20, 64, 20, 16),
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
                 child: Obx(() => Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -63,30 +62,6 @@ class HomeScreen extends GetView<HomeController> {
                 child: _buildMoodChips(context, colorScheme, theme),
               ),
             ),
-
-            // Listen again
-            Obx(() {
-              final library = Get.find<LibraryController>();
-              if (library.history.isEmpty) {
-                return const SliverToBoxAdapter(child: SizedBox.shrink());
-              }
-              return SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: _buildSectionHeader(theme, 'Listen again'),
-                      ),
-                      const SizedBox(height: 12),
-                      _buildHorizontalSongList(context, colorScheme, theme, library.history.take(15).toList()),
-                    ],
-                  ),
-                ),
-              );
-            }),
             // Quick Picks
             Obx(() {
               if (controller.isLoading.value && controller.quickPicks.isEmpty) {
@@ -98,7 +73,7 @@ class HomeScreen extends GetView<HomeController> {
                       children: [
                         _buildSectionHeader(theme, 'Quick picks'),
                         const SizedBox(height: 12),
-                        _buildQuickPicksShimmer(context, colorScheme),
+                        _buildShimmerHorizontalList(colorScheme),
                       ],
                     ),
                   ),
@@ -124,28 +99,33 @@ class HomeScreen extends GetView<HomeController> {
                 ),
               );
             }),
+            // Listen again
+            Obx(() {
+              final library = Get.find<LibraryController>();
+              if (library.history.isEmpty) {
+                return const SliverToBoxAdapter(child: SizedBox.shrink());
+              }
+              return SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: _buildSectionHeader(theme, 'Listen again'),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildHorizontalSongList(context, colorScheme, theme, library.history.take(15).toList()),
+                    ],
+                  ),
+                ),
+              );
+            }),
             // Playlists
             Obx(() {
               if (controller.isLoading.value && controller.popularPlaylists.isEmpty) {
-                return SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: Obx(() => _buildSectionHeader(theme, controller.currentMood.value == 'All' ? 'Popular Playlists' : '${controller.currentMood.value} Playlists')),
-                        ),
-                        const SizedBox(height: 12),
-                        Padding(
-                          padding: const EdgeInsets.only(left: 20),
-                          child: _buildShimmerHorizontalList(colorScheme),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
+                return const SliverToBoxAdapter(child: SizedBox.shrink());
               }
               if (controller.popularPlaylists.isEmpty) {
                 return const SliverToBoxAdapter(child: SizedBox.shrink());
@@ -170,25 +150,7 @@ class HomeScreen extends GetView<HomeController> {
             // Trending on YouTube
             Obx(() {
               if (controller.isLoading.value && controller.trendingSongs.isEmpty) {
-                return SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: Obx(() => _buildSectionHeader(theme, controller.currentMood.value == 'All' ? 'Trending on YouTube' : 'Trending ${controller.currentMood.value}')),
-                        ),
-                        const SizedBox(height: 12),
-                        Padding(
-                          padding: const EdgeInsets.only(left: 20),
-                          child: _buildShimmerHorizontalList(colorScheme),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
+                return const SliverToBoxAdapter(child: SizedBox.shrink());
               }
               if (controller.trendingSongs.isEmpty) {
                 return const SliverToBoxAdapter(child: SizedBox.shrink());
@@ -213,25 +175,7 @@ class HomeScreen extends GetView<HomeController> {
             // Recommended music videos
             Obx(() {
               if (controller.isLoading.value && controller.recommendedVideos.isEmpty) {
-                return SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: Obx(() => _buildSectionHeader(theme, controller.currentMood.value == 'All' ? 'Recommended music videos' : '${controller.currentMood.value} music videos')),
-                        ),
-                        const SizedBox(height: 12),
-                        Padding(
-                          padding: const EdgeInsets.only(left: 20),
-                          child: _buildVideoShimmerHorizontalList(colorScheme),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
+                return const SliverToBoxAdapter(child: SizedBox.shrink());
               }
               if (controller.recommendedVideos.isEmpty) {
                 return const SliverToBoxAdapter(child: SizedBox.shrink());
@@ -256,25 +200,7 @@ class HomeScreen extends GetView<HomeController> {
             // Mixed for you
             Obx(() {
               if (controller.isLoading.value && controller.mixedForYou.isEmpty) {
-                return SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: Obx(() => _buildSectionHeader(theme, controller.currentMood.value == 'All' ? 'Mixed for you' : '${controller.currentMood.value} mix')),
-                        ),
-                        const SizedBox(height: 12),
-                        Padding(
-                          padding: const EdgeInsets.only(left: 20),
-                          child: _buildShimmerHorizontalList(colorScheme),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
+                return const SliverToBoxAdapter(child: SizedBox.shrink());
               }
               if (controller.mixedForYou.isEmpty) {
                 return const SliverToBoxAdapter(child: SizedBox.shrink());
@@ -296,71 +222,10 @@ class HomeScreen extends GetView<HomeController> {
                 ),
               );
             }),
-            // Mashups
-            Obx(() {
-              if (controller.isLoading.value && controller.mashupSongs.isEmpty) {
-                return SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: Obx(() => _buildSectionHeader(theme, controller.currentMood.value == 'All' ? 'Mashup hits' : '${controller.currentMood.value} mashups')),
-                        ),
-                        const SizedBox(height: 12),
-                        Padding(
-                          padding: const EdgeInsets.only(left: 20),
-                          child: _buildShimmerHorizontalList(colorScheme),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }
-              if (controller.mashupSongs.isEmpty) {
-                return const SliverToBoxAdapter(child: SizedBox.shrink());
-              }
-              return SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: Obx(() => _buildSectionHeader(theme, controller.currentMood.value == 'All' ? 'Mashup hits' : '${controller.currentMood.value} mashups')),
-                      ),
-                      const SizedBox(height: 12),
-                      _buildHorizontalSongList(context, colorScheme, theme, controller.mashupSongs),
-                    ],
-                  ),
-                ),
-              );
-            }),
             // Similar to [Artist]
             Obx(() {
               if (controller.isLoading.value && controller.similarToArtistSongs.isEmpty) {
-                return SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: _buildSectionHeader(theme, 'Similar to ${controller.similarArtistName.value}'),
-                        ),
-                        const SizedBox(height: 12),
-                        Padding(
-                          padding: const EdgeInsets.only(left: 20),
-                          child: _buildShimmerHorizontalList(colorScheme),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
+                return const SliverToBoxAdapter(child: SizedBox.shrink());
               }
               if (controller.similarToArtistSongs.isEmpty) {
                 return const SliverToBoxAdapter(child: SizedBox.shrink());
@@ -385,25 +250,7 @@ class HomeScreen extends GetView<HomeController> {
             // Forgotten favorites
             Obx(() {
               if (controller.isLoading.value && controller.forgottenFavorites.isEmpty) {
-                return SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
-                          child: Obx(() => _buildSectionHeader(theme, controller.currentMood.value == 'All' ? 'Forgotten favorites' : '${controller.currentMood.value} favorites')),
-                        ),
-                        const SizedBox(height: 12),
-                        Padding(
-                          padding: const EdgeInsets.only(left: 20),
-                          child: _buildShimmerHorizontalList(colorScheme),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
+                return const SliverToBoxAdapter(child: SizedBox.shrink());
               }
               if (controller.forgottenFavorites.isEmpty) {
                 return const SliverToBoxAdapter(child: SizedBox.shrink());
@@ -444,106 +291,26 @@ class HomeScreen extends GetView<HomeController> {
   }
 
   Widget _buildShimmerHorizontalList(ColorScheme colorScheme) {
-    return Shimmer.fromColors(
-      baseColor: colorScheme.surfaceContainerHighest,
-      highlightColor: colorScheme.surfaceContainerHighest.withAlpha(80),
-      child: SizedBox(
-        height: 220,
-        child: ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          scrollDirection: Axis.horizontal,
-          itemCount: 5,
-          itemBuilder: (context, index) {
-            return Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(width: 140, height: 140, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12))),
-                  const SizedBox(height: 8),
-                  Container(width: 100, height: 16, color: Colors.white),
-                  const SizedBox(height: 4),
-                  Container(width: 80, height: 12, color: Colors.white),
-                ],
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildVideoShimmerHorizontalList(ColorScheme colorScheme) {
-    return Shimmer.fromColors(
-      baseColor: colorScheme.surfaceContainerHighest,
-      highlightColor: colorScheme.surfaceContainerHighest.withAlpha(80),
-      child: SizedBox(
-        height: 230,
-        child: ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          scrollDirection: Axis.horizontal,
-          itemCount: 3,
-          itemBuilder: (context, index) {
-            return Padding(
-              padding: const EdgeInsets.only(right: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(width: 260, height: 146, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12))),
-                  const SizedBox(height: 12),
-                  Container(width: 200, height: 16, color: Colors.white),
-                  const SizedBox(height: 8),
-                  Container(width: 150, height: 12, color: Colors.white),
-                ],
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuickPicksShimmer(BuildContext context, ColorScheme colorScheme) {
-    return Shimmer.fromColors(
-      baseColor: colorScheme.surfaceContainerHighest,
-      highlightColor: colorScheme.surfaceContainerHighest.withAlpha(80),
-      child: SizedBox(
-        height: 280,
-        child: ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          scrollDirection: Axis.horizontal,
-          itemCount: 3,
-          itemBuilder: (context, index) {
-            return SizedBox(
-              width: MediaQuery.of(context).size.width * 0.85,
-              child: Column(
-                children: List.generate(4, (i) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12, right: 16),
-                    child: Row(
-                      children: [
-                        Container(width: 56, height: 56, decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4))),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(width: 150, height: 16, color: Colors.white),
-                              const SizedBox(height: 8),
-                              Container(width: 100, height: 12, color: Colors.white),
-                            ],
-                          ),
-                        ),
-                        const Icon(Icons.more_vert, color: Colors.white),
-                      ],
-                    ),
-                  );
-                }),
-              ),
-            );
-          },
-        ),
+    return SizedBox(
+      height: 220,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: 5,
+        itemBuilder: (context, index) {
+          return Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(width: 140, height: 140, decoration: BoxDecoration(color: colorScheme.surfaceContainerHighest, borderRadius: BorderRadius.circular(8))),
+                const SizedBox(height: 8),
+                Container(width: 100, height: 16, color: colorScheme.surfaceContainerHighest),
+                const SizedBox(height: 4),
+                Container(width: 80, height: 12, color: colorScheme.surfaceContainerHighest),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
@@ -614,7 +381,7 @@ class HomeScreen extends GetView<HomeController> {
                 title: pl['title'] ?? '',
                 imageUrl: pl['thumbnailUrl'] ?? '',
                 subtitle: pl['subtitle'] ?? 'YouTube Playlist',
-                type: 'YoutubePlaylist',
+                type: 'Playlist',
                 id: pl['id'] ?? '',
               ));
             },
@@ -787,57 +554,9 @@ class HomeScreen extends GetView<HomeController> {
                             ],
                           ),
                         ),
-                        PopupMenuButton<String>(
+                        IconButton(
                           icon: Icon(Icons.more_vert, color: colorScheme.onSurface.withAlpha(150)),
-                          color: colorScheme.surface,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          onSelected: (value) {
-                            if (value == 'play_now') {
-                              playerController.playAll(controller.quickPicks, startIndex: controller.quickPicks.indexOf(song));
-                            } else if (value == 'play_next') {
-                              playerController.playNext(song);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Playing next: ${song.title}'), behavior: SnackBarBehavior.floating),
-                              );
-                            } else if (value == 'add_queue') {
-                              playerController.addToQueue(song);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Added to queue: ${song.title}'), behavior: SnackBarBehavior.floating),
-                              );
-                            }
-                          },
-                          itemBuilder: (context) => [
-                            PopupMenuItem(
-                              value: 'play_now',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.play_arrow_rounded, color: colorScheme.primary),
-                                  const SizedBox(width: 12),
-                                  const Text('Play Now', style: TextStyle(fontWeight: FontWeight.w600)),
-                                ],
-                              ),
-                            ),
-                            PopupMenuItem(
-                              value: 'play_next',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.playlist_play_rounded, color: colorScheme.primary),
-                                  const SizedBox(width: 12),
-                                  const Text('Play Next', style: TextStyle(fontWeight: FontWeight.w600)),
-                                ],
-                              ),
-                            ),
-                            PopupMenuItem(
-                              value: 'add_queue',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.queue_music_rounded, color: colorScheme.primary),
-                                  const SizedBox(width: 12),
-                                  const Text('Add to Queue', style: TextStyle(fontWeight: FontWeight.w600)),
-                                ],
-                              ),
-                            ),
-                          ],
+                          onPressed: () {},
                         ),
                       ],
                     ),
@@ -854,7 +573,7 @@ class HomeScreen extends GetView<HomeController> {
   Widget _buildRecommendedVideosList(BuildContext context, ColorScheme colorScheme, ThemeData theme) {
     final playerController = Get.find<AudioPlayerController>();
     return SizedBox(
-      height: 230,
+      height: 200,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -940,3 +659,7 @@ class HomeScreen extends GetView<HomeController> {
     );
   }
 }
+"""
+
+with open(r'p:\RiftWave-Music\lib\features\home\views\home_screen.dart', 'w', encoding='utf-8') as f:
+    f.write(content)

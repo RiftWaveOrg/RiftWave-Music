@@ -185,6 +185,9 @@ class _SongTileState extends State<SongTile> {
               } else if (value == 'download') {
                 HapticFeedback.lightImpact();
                 downloader.downloadSong(widget.song!);
+              } else if (value == 'remove_download') {
+                HapticFeedback.lightImpact();
+                downloader.removeDownload(widget.song!);
               }
             },
             itemBuilder: (context) => [
@@ -199,7 +202,7 @@ class _SongTileState extends State<SongTile> {
                 ),
               ),
               PopupMenuItem(
-                value: 'download',
+                value: (widget.song!.isDownloaded || library.downloadedSongs.any((s) => s.id == widget.song!.id)) ? 'remove_download' : 'download',
                 child: Row(
                   children: [
                     Obx(() {
@@ -213,13 +216,16 @@ class _SongTileState extends State<SongTile> {
                           color: colorScheme.primary,
                         ).animate().fadeIn().scale();
                       } else if (widget.song!.isDownloaded || library.downloadedSongs.any((s) => s.id == widget.song!.id)) {
-                        return const Icon(Icons.download_done_rounded, size: 20, color: Colors.green)
+                        return const Icon(Icons.delete_outline_rounded, size: 20, color: Colors.red)
                                .animate().scale(curve: Curves.elasticOut, duration: 500.ms);
                       }
                       return const Icon(Icons.download_rounded, size: 20);
                     }),
                     const SizedBox(width: 12),
-                    const Text('Download'),
+                    Obx(() {
+                      final isDownloaded = widget.song!.isDownloaded || library.downloadedSongs.any((s) => s.id == widget.song!.id);
+                      return Text(isDownloaded ? 'Remove Download' : 'Download', style: TextStyle(color: isDownloaded ? Colors.red : null));
+                    }),
                   ],
                 ),
               ),
