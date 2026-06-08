@@ -21,8 +21,6 @@ class RiftWaveAudioHandler extends BaseAudioHandler with SeekHandler {
   void Function()? onSkipToNextCallback;
   void Function()? onSkipToPreviousCallback;
 
-  
-  
   bool _isTransitioning = false;
 
   AudioPlayer get player => _player;
@@ -69,49 +67,44 @@ class RiftWaveAudioHandler extends BaseAudioHandler with SeekHandler {
     }
   }
 
-  Future<void> setMediaItemOnly(MediaItem item, String audioUrl, {Map<String, String>? headers}) async {
+  Future<void> updatePlaylist(List<MediaItem> items, List<String> audioUrls, {int initialIndex = 0}) async {
     _isTransitioning = true;
-    
     _mediaItems.clear();
-    _mediaItems.add(item);
-    mediaItem.add(item);
-    
-    debugPrint('RiftWaveAudioHandler: Loading primary audio URL: $audioUrl');
-    
-    
+    _mediaItems.addAll(items);
+    if (_mediaItems.isNotEmpty && initialIndex < _mediaItems.length) {
+      mediaItem.add(_mediaItems[initialIndex]);
+    }
+
     try {
       await _playlist.clear();
-      final uri = Uri.parse(audioUrl);
-      await _playlist.add(AudioSource.uri(uri, tag: item, headers: headers));
+      final sources = <AudioSource>[];
+      for (int i = 0; i < items.length; i++) {
+        sources.add(AudioSource.uri(Uri.parse(audioUrls[i]), tag: items[i]));
+      }
+      await _playlist.addAll(sources);
       
-      
-      await _player.seek(Duration.zero, index: 0);
+      if (initialIndex < sources.length) {
+         await _player.seek(Duration.zero, index: initialIndex);
+      }
     } catch (e) {
-      debugPrint('RiftWaveAudioHandler: Interrupted during setMediaItemOnly ($e). This is expected if skipped rapidly.');
+      debugPrint('RiftWaveAudioHandler: Interrupted during updatePlaylist ($e)');
     }
     
     _isTransitioning = false;
   }
 
-  Future<void> preloadNextItem(MediaItem item, String audioUrl, {Map<String, String>? headers}) async {
-    
-    if (_mediaItems.any((m) => m.id == item.id)) {
-        return;
-    }
-
+  Future<void> appendToPlaylist(MediaItem item, String audioUrl) async {
     _mediaItems.add(item);
-    debugPrint('RiftWaveAudioHandler: Preloading next audio URL: $audioUrl');
-    
-    final uri = Uri.parse(audioUrl);
-    await _playlist.add(AudioSource.uri(uri, tag: item, headers: headers));
+    try {
+      await _playlist.add(AudioSource.uri(Uri.parse(audioUrl), tag: item));
+    } catch (e) {
+      debugPrint('RiftWaveAudioHandler: Failed to append to playlist — $e');
+    }
   }
 
-  Future<void> setMediaItemAndPlay(MediaItem item, String audioUrl, {Map<String, String>? headers}) async {
-    try {
-      await setMediaItemOnly(item, audioUrl, headers: headers);
-      await _player.play();
-    } catch (e) {
-      debugPrint('RiftWaveAudioHandler: Interrupted during play ($e)');
+  Future<void> jumpToIndex(int index) async {
+    if (index >= 0 && index < _playlist.length) {
+       await _player.seek(Duration.zero, index: index);
     }
   }
 
@@ -147,8 +140,6 @@ class RiftWaveAudioHandler extends BaseAudioHandler with SeekHandler {
     } catch (e) {
       debugPrint('RiftWaveAudioHandler: Interrupted during stop ($e)');
     }
-    
-    
   }
 
   @override
@@ -159,10 +150,8 @@ class RiftWaveAudioHandler extends BaseAudioHandler with SeekHandler {
   @override
   Future<void> skipToNext() async {
     if (_playlist.length > 1 && _player.currentIndex != null && _player.currentIndex! < _playlist.length - 1) {
-       
        await _player.seekToNext();
     } else {
-       
        onSkipToNextCallback?.call();
     }
   }
