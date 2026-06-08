@@ -57,7 +57,7 @@ class AboutScreen extends StatelessWidget {
               icon: Icons.code_rounded,
               title: 'Source Code',
               subtitle: 'View the project on GitHub',
-              url: 'https://github.com/Pratyush0803/RiftWave-Music',
+              url: 'https://github.com/NazomiOrg/Nazomi-App',
             ),
             const SizedBox(height: 16),
             _buildLinkTile(
@@ -65,7 +65,7 @@ class AboutScreen extends StatelessWidget {
               icon: Icons.bug_report_rounded,
               title: 'Report an Issue',
               subtitle: 'Found a bug? Let us know',
-              url: 'https://github.com/Pratyush0803/RiftWave-Music/issues',
+              url: 'https://github.com/NazomiOrg/Nazomi-App/issues',
             ),
             const SizedBox(height: 16),
             _buildLinkTile(

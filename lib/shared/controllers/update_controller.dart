@@ -67,7 +67,7 @@ class UpdateController extends GetxController {
   Future<void> _checkForUpdates() async {
     try {
       final dio = Dio();
-      final response = await dio.get('https://api.github.com/repos/Pratyush0803/RiftWave-Music/releases/latest');
+      final response = await dio.get('https://api.github.com/repos/NazomiOrg/Nazomi-App/releases/latest');
       
       if (response.statusCode == 200) {
         final data = response.data;
@@ -128,7 +128,7 @@ class UpdateController extends GetxController {
   Future<bool> checkForUpdatesManual() async {
     try {
       final dio = Dio();
-      final response = await dio.get('https://api.github.com/repos/Pratyush0803/RiftWave-Music/releases/latest');
+      final response = await dio.get('https://api.github.com/repos/NazomiOrg/Nazomi-App/releases/latest');
       
       if (response.statusCode == 200) {
         final data = response.data;
@@ -183,7 +183,7 @@ class UpdateController extends GetxController {
   Future<void> startUpdate() async {
     
     if (kIsWeb || Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
-      final Uri githubUrl = Uri.parse('https://github.com/Pratyush0803/RiftWave-Music/releases/latest');
+      final Uri githubUrl = Uri.parse('https://github.com/NazomiOrg/Nazomi-App/releases/latest');
       if (await canLaunchUrl(githubUrl)) {
         await launchUrl(githubUrl, mode: LaunchMode.externalApplication);
       }
