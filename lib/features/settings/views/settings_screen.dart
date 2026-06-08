@@ -246,7 +246,7 @@ class SettingsScreen extends GetView<SettingsController> {
               title: 'Source Code',
               subtitle: 'GitHub — Open Source (GPL v3)',
               onTap: () async {
-                final url = Uri.parse('https://github.com/Pratyush0803/RiftWave-Music');
+                final url = Uri.parse('https://github.com/NazomiOrg/Nazomi-App');
                 if (await canLaunchUrl(url)) {
                   await launchUrl(url, mode: LaunchMode.externalApplication);
                 }
