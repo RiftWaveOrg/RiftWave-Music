@@ -54,3 +54,10 @@ GoogleService-Info.plist
 # Android App Signing
 *.jks
 key.properties
+keystore_base64.txt
+
+# Scratch / utility scripts
+refactor.py
+overwrite_home_screen.py
+rewrite_home_screen.py
+scratch.py
